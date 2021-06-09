@@ -1,0 +1,45 @@
+
+(function() {
+  var callWithJQuery;
+
+  callWithJQuery = function(pivotModule) {
+    if (typeof exports === "object" && typeof module === "object") {
+      return pivotModule(require("jquery"));
+    } else if (typeof define === "function" && define.amd) {
+      return define(["jquery"], pivotModule);
+    } else {
+      return pivotModule(jQuery);
+    }
+  };
+
+  callWithJQuery(function($) {
+    return $.pivotUtilities.excel_renderers = {
+      "Excel Export": function(pivotData, opts) {
+
+
+function Workbook() {
+	if(!(this instanceof Workbook)) return new Workbook();
+	this.SheetNames = [];
+	this.Sheets = {};
+}
+ 
+var wb = XLSX.utils.table_to_book($.pivotUtilities.renderers.Table(pivotData, opts), {sheet:"OSMR"});
+/* add worksheet to workbook */
+ 
+;
+ 
+var wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
+function s2ab(s) {
+	var buf = new ArrayBuffer(s.length);
+	var view = new Uint8Array(buf);
+	for (var i=0; i!=s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+	return buf;
+}
+saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), "test.xlsx")
+return $.pivotUtilities.renderers.Table(pivotData, opts);
+    
+    }
+     };
+  });
+
+}).call(this);
