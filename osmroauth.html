@@ -59,7 +59,7 @@
 <link rel="stylesheet" type="text/css" href="https://www.2ndnewhawscouts.org.uk/osmr/css/osmr.css">
 
 <link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
-
+<script src='https://js.sentry-cdn.com/e7765bb8daf149f0adc902a3b52aec0c.min.js' crossorigin="anonymous"></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript" src="https://www.2ndnewhawscouts.org.uk/osmr/scripts/pivot.js?ts=6"></script>
@@ -164,7 +164,7 @@ const removeDuplicates4 = (list) => list.reduce((r, i) =>
       build_dialog = build_dialog + "</select></span><br><p><input type =\"checkbox\" name=\"refresh\" value=\"refresh\" id=\"refresh\">Refresh Data (Ignore Cache)";
       build_dialog = build_dialog + "&nbsp;&nbsp;&nbsp;&nbsp;Output: <input type =\"radio\" name=\"outputtype\" value=\"grid\">Grid<input type =\"radio\" name=\"outputtype\" value=\"pivot\">Pivot </p>";
       build_dialog = build_dialog + "</p><p>Saved Report: <select id=\"SavedReports2\"></select></p>";
-      build_dialog = build_dialog + "<p>Find this useful? Think about a donation to <a href=\"https://mydonate.bt.com/charities/2ndnewhawscoutgroup\" target=\"_blank\">2nd New Haw Scout Group</a>"
+      build_dialog = build_dialog + "<p>Find this useful? Think about a donation to <a href=\"https://2ndnewhawscouts.org.uk/wordpress-plugins-for-scout-websites/osmr-reporting-for-osm/#donate\" target=\"_blank\">2nd New Haw Scout Group</a>"
     build_dialog = build_dialog + "</div>";  
     $("body").append(build_dialog);
       $("body").append("<div id=\"dialog-form2\" title=\"Create a Report : Select Fields\"><div class=\"progress-label\"></div><div id=\"progressbar\"></div><span id=\"fieldlist\"></span></div>");  
@@ -934,7 +934,7 @@ p['userid'] = security.userid;
 
 
 }
-
+check_xhr();
 var obj = $.extend({}, p);
  
 var request = $.ajax({
@@ -944,7 +944,12 @@ var request = $.ajax({
   data: $.param(obj),
   dataType: "json"
 });
-request.done(function( msg ) {
+request.done(function( msg ,status,req) {
+  $("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
+   var d = new Date();
+  var n = d.getTime();
+  n = n + req.getResponseHeader("x-ratelimit-reset")*1000;
+  $("#rt_abs").text(n);
   f(msg);
 });
 
@@ -972,6 +977,7 @@ p['userid'] = security.userid;
 
 
 var obj = $.extend({}, p);
+check_xhr();
 $.ajax({
 			url: url,
 			type: 'POST',
@@ -979,7 +985,12 @@ $.ajax({
             headers: {"Authorization" : 'Bearer '+oauthcode.data.access},
     
 			data: $.param(obj),
-			success: function(data,status){f(data);},
+			success: function(data,status,req){$("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
+			  var d = new Date();
+  var n = d.getTime();
+   n = n + req.getResponseHeader("x-ratelimit-reset")*1000;
+  $("#rt_abs").text(n);
+			f(data);},
                         error: function (responseData, textStatus, errorThrown) {
         alert('POST failed.'); }
 		});
@@ -992,6 +1003,21 @@ $.ajax({
 //            f(data);
 //        },"json");
 
+}
+
+function check_xhr() {
+    remain = $("#rr").text();
+    time = $("#rt_abs").text();
+    var d = new Date();
+    var n = d.getTime();
+    if (remain==0) {
+        if (n<time) {
+        d = new Date(parseInt(time));
+        alert("You have reached your limit on the API - you can use again at "+d.toTimeString());
+        report_config = {};
+          throw new Error("Can't read data at the moment! OSM Limit reached");
+        }
+    }
 }
 
 function menu_openNav() {
@@ -1024,9 +1050,11 @@ function receiveMessage(f){
     console.log(f)
     oauthcode = f;
     security = f;
+    if (f.data.access=="") {alert("There was an issue during logon with OSM - please try again later"); } else {
     var parameters = [];
    //   do_xhr_post('https://www.onlinescoutmanager.co.uk/oauth/resource',get_sections,parameters);
      do_xhr('https://www.onlinescoutmanager.co.uk/api.php?action=getSectionConfig',set_sections,"");
+    }
 }
 
 function call_report () {
@@ -1183,6 +1211,7 @@ $.ajax({
             success: function () { },
             failure: function () { },
             complete: function (data) {
+                
                 template_report=data.responseJSON;select_sections();
                 for(var i = 0; i < template_report.reports.length;  i++) {
                   $("#SavedReports").append("<option class=\"template\" value=\"reports\">"+template_report.reports[i].name+"</option>");
@@ -1204,7 +1233,9 @@ function select_sections() {
   //  $("#checks").empty();
 $("select.section-select").empty();
     for(var property in section_config) {
+        if (roles_config[get_roles_section(property)]!=undefined){
        $("select.section-select").append("<option value=\""+property+"\">"+roles_config[get_roles_section(property)].sectionname+"</option>");
+        }
   //  $("#checks").append("<input class=\"section_chk\" type=\"checkbox\"  name=\""+property+"\" value=\""+property+"\" id=\""+property+"\">"+roles_config[get_roles_section(property)].groupname+":"+roles_config[get_roles_section(property)].sectionname+"<BR>");    
 ga('send', 'event',  'Logon',security.userid, roles_config[get_roles_section(property)].groupname+":"+roles_config[get_roles_section(property)].sectionname);
 }
@@ -1348,7 +1379,7 @@ function select_fields () {
             get_data_array.push(get_data_line);
         }
 
-        if ((report_type == "Members")|(report_type == "Members & Badges")|(report_type=="Events & Attendance")|(report_type == "Members & Badges Details")) {
+        if ((report_type == "Members")|(report_type =="Programme & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges")|(report_type=="Events & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")|(report_type=="Members & Sections")) {
             var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/settings/patrols/?action=get&sectionid='+section;
             report_config[section].patrol = "";
@@ -1379,8 +1410,12 @@ function select_fields () {
         //ext/members/flexirecords/?action=getFlexiRecords&sectionid='.$ss_value.'&archived=n
         // alert(section + " " + report_config[section].termid);
         }
-        if ((report_type == "Members & Badges")|(report_type == "Badges")|(report_type == "Members & Badges Details")) {
-            for(var i = 1; i < 5;  i++) {
+        if ((report_type == "Members & Badges")|(report_type == "Badges")|(report_type == "Members & Badges Details")|(report_type == "Members & Challenge Badges")) {
+            maxbadges = 5; badge_start=1;
+            if (report_type == "Members & Challenge Badges") {
+              maxbadges = 2; badge_start=1;    
+            }
+            for(var i = badge_start; i < maxbadges;  i++) {
 //for(var i = 1; i < 2;  i++) {
             report_config[section].badges = new Array();
             report_config[section].memberbadges = "";
@@ -1392,7 +1427,7 @@ function select_fields () {
             get_data_line.field = "badges|"+i;
             get_data_array.push(get_data_line);
             } 
-            if ((report_type == "Members & Badges")|(report_type == "Members & Badges Details")) {
+            if ((report_type == "Members & Badges")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")) {
             var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/badges/badgesbyperson/?action=loadBadgesByMember&section='+section_config[section].section_type+'&sectionid='+section+'&term_id='+report_config[section].termid;
             get_data_line.data = report_config[section];
@@ -1412,6 +1447,39 @@ function select_fields () {
             get_data_line.field = "events";
             get_data_array.push(get_data_line);
             }
+            
+        if ((report_type == "Programme & Badges")|(report_type == "Programme & Attendance")){
+            report_config[section].programme = "";
+            var get_data_line = new Object();
+          //  https://www.onlinescoutmanager.co.uk/ext/programme/?action=getProgrammeSummary&sectionid=3320&termid=521815
+            get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/programme/?action=getProgrammeSummary&sectionid='+section+'&termid='+report_config[section].termid;
+            get_data_line.data = report_config[section];
+            get_data_line.olddata = old_report_config[section];    
+            get_data_line.type = "GET";
+            get_data_line.field = "programme";
+            get_data_array.push(get_data_line);
+        }    
+        if ((report_type == "Programme & Attendance")) {
+            report_config[section].attendance_config = "";
+            var get_data_line = new Object();
+          // https://www.onlinescoutmanager.co.uk/ext/members/attendance/?action=structure&sectionid=3320&termid=521815&section=scouts
+            get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/members/attendance/?action=structure&sectionid='+section+'&termid='+report_config[section].termid+"&section="+section_config[section].section_type;
+            get_data_line.data = report_config[section];
+            get_data_line.olddata = old_report_config[section];    
+            get_data_line.type = "GET";
+            get_data_line.field = "attendance_config";
+            get_data_array.push(get_data_line);
+         //   https://www.onlinescoutmanager.co.uk/ext/members/attendance/?action=get&sectionid=3320&termid=521815&section=scouts&nototal=true
+           report_config[section].attendance = "";
+            var get_data_line = new Object();
+             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/members/attendance/?action=get&sectionid='+section+'&termid='+report_config[section].termid+"&section="+section_config[section].section_type+"&nototal=true";
+            get_data_line.data = report_config[section];
+            get_data_line.olddata = old_report_config[section];    
+            get_data_line.type = "GET";
+            get_data_line.field = "attendance";
+            get_data_array.push(get_data_line);
+            
+        }
     }
     
     $( ".progressbar" ).text = "Loading Data";
@@ -1430,10 +1498,13 @@ function assemble_data() {
      $( ".progress-label" ).text('Round 2');
      var report_type = $( "#report_type option:selected" ).text();
     for(var section in report_config) {
-        if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Badges Details")|(report_type=="Events & Attendance")) {
+        if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Events & Attendance")|(report_type=="Members & Sections")) {
         var members_array = JSON.parse(report_config[section].members);
+        var mc = false;
+        report_config[section].member_sections = new Array();
         for (var scout in members_array.data) {
            // alert(members_array.data[scout].first_name);
+           if (mc==false) {
            var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/customdata/?action=getData&section_id='+section;
             get_data_line.data = report_config[section];
@@ -1442,7 +1513,21 @@ function assemble_data() {
             get_data_line.olddata = old_report_config[section];  
             get_data_line.postvar = 'associated_type=member&context=members&associated_id='+members_array.data[scout].member_id;
             get_data_array.push(get_data_line);
-            break;
+        //    break;
+            mc = true;
+           }
+           if (report_type=="Members & Sections") {
+                var get_data_line = new Object();
+                //https://www.onlinescoutmanager.co.uk/ext/members/contact/?action=getIndividual&sectionid=3320&scoutid=649811&termid=521815&context=members
+                //  https://www.onlinescoutmanager.co.uk/members/contact/?action=getIndividual&sectionid=3320&scoutid=491560&termid=521815&context=members
+                 get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/members/contact/?action=getIndividual&sectionid='+section+'&scoutid='+members_array.data[scout].member_id+'&termid='+report_config[section].termid+'&context=members';
+                 get_data_line.data = report_config[section];
+                 get_data_line.type = "GET";
+                 get_data_line.field = "member_sections|"+members_array.data[scout].member_id;
+                 get_data_line.olddata = old_report_config[section];  
+             //    get_data_line.postvar = 'associated_type=member&context=members&associated_id='+members_array.data[scout].member_id;
+                 get_data_array.push(get_data_line);
+           }
         };
         if (report_config[section].hasOwnProperty("flexiconfig")==true) {
         if (report_config[section].flexiconfig!="") {
@@ -1481,6 +1566,22 @@ function assemble_data() {
             get_data_line.olddata = old_report_config[section];    
             get_data_line.type = "GET";
             get_data_line.field = "qmi|"+qml.data[qi].id;
+            get_data_array.push(get_data_line);  
+          }
+           
+        }
+        
+        if (report_type=="Programme & Badges") {
+          report_config[section].prog = new Array();
+          var pl =  (report_config[section].programme);
+          for (var pi=0; pi< pl.items.length; pi++ ) {
+            var get_data_line = new Object();
+            //https://www.onlinescoutmanager.co.uk/ext/programme/?action=getProgramme&eveningid=5702217&sectionid=3320&termid=521815
+            get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/programme/?action=getProgramme&eveningid='+pl.items[pi].eveningid+'&sectionid='+section+'&termid='+report_config[section].termid;
+            get_data_line.data = report_config[section];
+            get_data_line.olddata = old_report_config[section];    
+            get_data_line.type = "GET";
+            get_data_line.field = "prog|"+pl.items[pi].eveningid;
             get_data_array.push(get_data_line);  
           }
            
@@ -1527,7 +1628,7 @@ function assemble_data() {
         }   
     }
 
-   if (report_type=="Members & Badges Details") {
+   if ((report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")) {
       report_config[section].badgereq = new Array();
        report_config[section].badgewiz = new Array();
       for(var section in report_config) {
@@ -1658,7 +1759,9 @@ function assemble_data2() {
         { "fieldname" : "BD|Badge|reqstatus", "fieldlabel" : "Member Status" },
         { "fieldname" : "BD|Badge|needed", "fieldlabel" : "Required" },
         { "fieldname" : "BD|Badge|neededsym", "fieldlabel" : "Required Symbol" },
-         { "fieldname" : "BD|Badge|countneeded", "fieldlabel" : "Number Needed" }
+         { "fieldname" : "BD|Badge|countneeded", "fieldlabel" : "Number Needed" },
+         { "fieldname" : "BD|Badge|countdone", "fieldlabel" : "Number Done" },
+         { "fieldname" : "BD|Badge|countremain", "fieldlabel" : "Number Remaining" }
         ];
     var bs_field_list = [
           { "fieldname" : "BS|Badge|name", "fieldlabel" : "Badge Name" },
@@ -1708,6 +1811,27 @@ function assemble_data2() {
        { "fieldname" : "QI|Item|9", "fieldlabel" : "Renewal Price" },
        { "fieldname" : "QI|Item|4", "fieldlabel" : "Notes" }
         ]; 
+    var pl_field_list = [
+        { "fieldname" : "PL|Programme|title", "fieldlabel" : "Title" },
+        { "fieldname" : "PL|Programme|meetingdate", "fieldlabel" : "Date" },
+        { "fieldname" : "PL|Programme|group", "fieldlabel" : "Group" },
+        { "fieldname" : "PL|Programme|section", "fieldlabel" : "Section" },
+        { "fieldname" : "PL|Programme|notesforhelpingparents", "fieldlabel" : "Helper Notes" },
+        { "fieldname" : "PL|Programme|notesforparents", "fieldlabel" : "Parent Notes" },
+        { "fieldname" : "PL|Programme|games", "fieldlabel" : "Games Notes" },
+        { "fieldname" : "PL|Programme|prenotes", "fieldlabel" : "Pre Notes" },
+        { "fieldname" : "PL|Programme|postnotes", "fieldlabel" : "Post Notes" },
+        { "fieldname" : "PL|Programme|leaders", "fieldlabel" : "Leader Notes" },
+        ];
+    var pi_field_list = [
+        { "fieldname" : "PI|Progs|badgetypeLongName", "fieldlabel" : "Badge Type" },
+        { "fieldname" : "PI|Progs|badgeLongName", "fieldlabel" : "Badge Name" },
+        { "fieldname" : "PI|Progs|columnnameLongName", "fieldlabel" : "Requirement" }
+        ];
+      var att_field_list = [
+        { "fieldname" : "AT|Attendance|attendance", "fieldlabel" : "Attended?" },
+         { "fieldname" : "AT|Attendance|attendances", "fieldlabel" : "Attended Symbol" }
+        ];
     var searchIDs = $('#fieldtable input:checked').map(function(){
         
       return $(this).val();
@@ -1736,7 +1860,7 @@ function assemble_data2() {
     var report_type = $( "#report_type option:selected" ).text();
     $("#fieldlist").empty();
     $("#fieldlist").show();
-     if ((report_type=="Members & Badges")|(report_type=="Members")|(report_type=="Events & Attendance")|(report_type=="Members & Badges Details") ){
+     if ((report_type=="Members & Badges")|(report_type=="Members")|(report_type=="Programme & Attendance")|(report_type=="Events & Attendance")|(report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Sections") ){
     field_list = field_list + "<li>Members";
     field_list = field_list + "<ul><li>Core Fields";
     field_list = field_list + "<ul><li>Core Member Fields<ul>";
@@ -1828,7 +1952,7 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
     //field_list = field_list + "</ul>";      
     field_list = field_list + "</li></ul>"; // Members
 }
-    if ((report_type=="Members & Badges Details")|(report_type=="Members & Badges")|(report_type=="Badges") ){
+    if ((report_type=="Members & Badges Details")|(report_type=="Members & Badges")|(report_type=="Badges")|(report_type=="Members & Challenge Badges") ){
     field_list = field_list + "<li>Badges<ul>";
     for (var core in badge_field_list) {
         
@@ -1838,7 +1962,7 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
     field_list = field_list + "</ul></li>"; // Badges
     }
     
-    if ((report_type=="Members & Badges")|(report_type=="Members & Badges Details")) {
+    if ((report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
     field_list = field_list + "<li>Badges per Member<ul>";
     for (var core in bm_field_list) {
         
@@ -1847,7 +1971,7 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
     } 
     field_list = field_list + "</ul></li>"; // Badges
     }
-    if (report_type=="Members & Badges Details") {
+    if ((report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
 field_list = field_list + "<li>Badge Requirements per Member<ul>";
     for (var core in bm_field_detail_list) {    
         field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+bm_field_detail_list[core].fieldlabel+"\" value=\""+bm_field_detail_list[core].fieldname;
@@ -1862,6 +1986,36 @@ field_list = field_list + "<li>Badge Requirements per Member<ul>";
         
         field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+ev_field_list[core].fieldlabel+"\" value=\""+ev_field_list[core].fieldname;
         field_list = field_list + "\" id=\""+ev_field_list[core].fieldname+"\""+is_checked(checklist,ev_field_list[core].fieldname)+">"+ev_field_list[core].fieldlabel + "</li>";
+    } 
+    field_list = field_list + "</ul></li>"; 
+    }
+    
+  
+    
+    if ((report_type=="Programme & Badges")|(report_type=="Programme & Attendance") ){
+    field_list = field_list + "<li>Programme<ul>";
+    for (var core in pl_field_list) {
+        
+        field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+pl_field_list[core].fieldlabel+"\" value=\""+pl_field_list[core].fieldname;
+        field_list = field_list + "\" id=\""+pl_field_list[core].fieldname+"\""+is_checked(checklist,pl_field_list[core].fieldname)+">"+pl_field_list[core].fieldlabel + "</li>";
+    } 
+    field_list = field_list + "</ul></li>"; 
+    if (report_type=="Programme & Badges") {
+    field_list = field_list + "<li>Badge Info<ul>";
+    for (var core in pi_field_list) {
+        
+        field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+pi_field_list[core].fieldlabel+"\" value=\""+pi_field_list[core].fieldname;
+        field_list = field_list + "\" id=\""+pi_field_list[core].fieldname+"\""+is_checked(checklist,pi_field_list[core].fieldname)+">"+pi_field_list[core].fieldlabel + "</li>";
+    } 
+    field_list = field_list + "</ul></li>";
+    }
+    }
+    if (report_type=="Programme & Attendance") {
+         field_list = field_list + "<li>Attendance<ul>";
+         for (var core in att_field_list) {
+        
+        field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+att_field_list[core].fieldlabel+"\" value=\""+att_field_list[core].fieldname;
+        field_list = field_list + "\" id=\""+att_field_list[core].fieldname+"\""+is_checked(checklist,att_field_list[core].fieldname)+">"+att_field_list[core].fieldlabel + "</li>";
     } 
     field_list = field_list + "</ul></li>"; 
     }
@@ -1911,7 +2065,7 @@ if (event_config.structure[1].rows.length>0) { field_list = field_list + "</ul><
     } 
     field_list = field_list + "</ul></li>"; 
     }
-
+    
 
     if ((report_type=="QM List") ){
     field_list = field_list + "<li>QM List<ul>";
@@ -2099,7 +2253,7 @@ $( "#progressbar" ).progressbar({ value: 100 * ( get_data_array2.length / get_da
     
 
     var obj = $.extend({}, p2);
-    
+    check_xhr();
     var request = $.ajax({
   url: url,
   method: "POST",
@@ -2109,6 +2263,11 @@ $( "#progressbar" ).progressbar({ value: 100 * ( get_data_array2.length / get_da
 success: function(data,status,req) {
   var index = "";
   var remaining = req.getResponseHeader('X-RateLimit-Remaining');
+    $("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
+   var d = new Date();
+  var n = d.getTime();
+  n = n + req.getResponseHeader("x-ratelimit-reset")*1000;
+  $("#rt_abs").text(n);
        if (1==1) {
        if (get_data_array[c].field.indexOf("|")>1) {
           index = get_data_array[c].field.substring(get_data_array[c].field.lastIndexOf("|")+1);
@@ -2123,8 +2282,10 @@ success: function(data,status,req) {
             if (get_data_array[c+1].type == "GET") { get_data_xhr(c+1,f); } else {get_data_post_xhr(c+1,f); };
         } else { f();}
            $( "#progressbar" ).progressbar({ value: 100 * ( get_data_array2.length / get_data_array.length ) });
+           if (c>=0&&c<get_data_array.length) {
            $( ".progress-label" ).text(get_data_array[c].field);
            get_data_array2.push(get_data_array[c]);
+           }
            if (get_data_array.length == get_data_array2.length ) {f();} 
         } else { get_data_xhr(c,f); }
 
@@ -2292,6 +2453,7 @@ function get_data_post_xhr(c,f) {
     var osmpath = url.substring(37,url.indexOf("?"));
     url = relay_path +"?osmpath="+osmpath+"&"+url.substring(url.indexOf("?")+1,1000);
 //var obj = $.extend({}, p);
+check_xhr();
 $.ajax({
 			url: url,
 			type: 'POST',
@@ -2299,7 +2461,12 @@ $.ajax({
             headers: {"Authorization" : 'Bearer '+oauthcode.data.access,  "Content-Type": "application/x-www-form-urlencoded"},
    
 			data:get_data_array[c].postvar,
-			success: function(data,status){
+			success: function(data,status,req){
+			      $("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
+   var d = new Date();
+  var n = d.getTime();
+  n = n + req.getResponseHeader("x-ratelimit-reset")*1000;
+  $("#rt_abs").text(n);
 			     get_data_array[c].data[get_data_array[c].field] = data; //response.responseText;
       if ((get_data_array.length -1)  != c ) {
           if (get_data_array[c+1].type == "GET") {
@@ -2527,7 +2694,7 @@ dialog_delay.dialog( "open" );
     report_data = [];
    // ga('send', 'event', 'Report', 'OSMR', report_type);
     // Members and Members & Badges
-    if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Badges Details")) {
+    if ((report_type=="Programme & Attendance")|(report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Members & Sections")) {
     for(var section in report_config) {
         var members_array = JSON.parse(report_config[section].members);
         for( var member in members_array.data) {  
@@ -2568,7 +2735,65 @@ dialog_delay.dialog( "open" );
             if (report_type=="Members") {
               report_data.push(report_line);
             };
-            if ((report_type=="Members & Badges")|(report_type=="Members & Badges Details")) {
+            if (report_type=='Members & Sections') {
+                var sl = report_config[section].member_sections[member];
+                
+                report_line2 =  Object.assign({}, report_line);
+                if (sl.data.others==undefined){
+                    report_line2['Other Sections'] = "";
+                     
+                    report_data.push(report_line2);
+                } else { 
+                    for(var i=0; i<sl.data.others.length;i++) {
+                         var report_line3 = new Object;
+                         report_line3 =  Object.assign({}, report_line2);
+                        report_line3['Other Sections'] = sl.data.others[i];
+                        report_data.push(report_line3);
+                    }
+                }
+            }
+            if (report_type=='Programme & Attendance') {
+                var progslist = report_config[section].programme.items;
+               if (Array.isArray(progslist)) { 
+                for (var i=0; i<progslist.length; i++){
+                    report_line2 =  Object.assign({}, report_line);
+                    for (var field in checklist ) {
+                        var fn = checklist[field].substring(checklist[field].lastIndexOf("|")+1);
+                      if ( checklist[field].substring(0,12)=="PL|Programme" ){
+                          
+                          report_line2[checklist2[field]] = progslist[i][fn];
+                           if (fn=="group") { report_line2[checklist2[field]] = roles_config[get_roles_section(section)].groupname; }
+                           if (fn=="section") { report_line2[checklist2[field]] = roles_config[get_roles_section(section)].sectionname; }
+                      }
+                      if ( checklist[field].substring(0,13)=="AT|Attendance" ){
+                         var m = report_config[section].attendance.items.find(e=> e.scoutid==member );
+                        
+                         if (m!=undefined) {
+                             if (m[progslist[i]["meetingdate"]]!=undefined) {
+                                 if (fn=="attendance") {
+                                 report_line2['Attended?']=m[progslist[i]["meetingdate"]]
+                                 } else {
+                                    if(m[progslist[i]["meetingdate"]]=="Yes") { report_line2['Attended'] = '&#9989;'; }
+                                    if(m[progslist[i]["meetingdate"]]=="No") { report_line2['Attended'] = '&#10060;'; }
+                                    if(m[progslist[i]["meetingdate"]]=="") { report_line2['Attended'] = ''; }
+                                 }
+                             } else {
+                                  if (fn=="attendance") { 
+                                report_line2['Attended?']=""; } else {report_line2['Attended']="";}
+                             }
+                         } else {
+                             if (fn=="attendance") { 
+                             report_line2['Attended?']=""; } else  {report_line2['Attended']="";}
+                                 
+                             }
+                      }
+                    }
+                    
+                    report_data.push(report_line2);
+                }
+            }
+            }
+            if ((report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
             // Loop at Badges and look for member/badge intersects 
                
                 var bm_def =  (report_config[section].memberbadges);
@@ -2608,7 +2833,7 @@ var bmb = bm_def.data[bm].badges.findIndex(function find(a){return a.badge_short
     } 
   };
 
-if (report_type=="Members & Badges Details") {
+if ((report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
      
 } 
       
@@ -2700,6 +2925,47 @@ var bmd_index = bmd.items.findIndex(function find(a){return a.scoutid==member;})
                                          else {if (fn=="needed") {report_line3[checklist2[field]]="Not Requried";} else {report_line3[checklist2[field]]="&#10062;";} }
                                       } else { if (fn=="needed") {report_line3[checklist2[field]]="Completed" } else {report_line3[checklist2[field]]="&#9989;" }}
                               }
+                              }
+                             
+                              if (fn=="countdone") {
+                                  bwiz = report_config[section].badgewiz[badges].meta.module_status;
+                                  bwizcheck = bmr_list[bmr_list_idx]; // this is the requirement we're looking at
+                                  tn = 0;
+                                   if (bmd_index!=-1) {
+                                  for (var i=0; i<bmr_list.length;i++) {
+                                      if (bmr_list[i].module==bmr_list[bmr_list_idx].module){
+                                          if (bmd.items[bmd_index][bmr_list[i].field]!=undefined)
+                                          if ((bmd.items[bmd_index][bmr_list[i].field].toString().substring(0,1)!="")&&(bmd.items[bmd_index][bmr_list[i].field].toString().substring(0,1)!="x")) {
+                                              tn+=1;
+                                          }
+                                      }
+                                  }
+                                   }
+                                   report_line3[checklist2[field]] = tn;
+                                  
+                                  
+                              }
+                              if (fn=="countremain") {
+                                  bwiz = report_config[section].badgewiz[badges].meta.module_status;
+                                  bwizcheck = bmr_list[bmr_list_idx]; // this is the requirement we're looking at
+                                  tn = 0;
+                                   if (bmd_index!=-1) {
+                                  for (var i=0; i<bmr_list.length;i++) {
+                                      if (bmr_list[i].module==bmr_list[bmr_list_idx].module){
+                                          if (bmd.items[bmd_index][bmr_list[i].field]!=undefined)
+                                          if ((bmd.items[bmd_index][bmr_list[i].field].toString().substring(0,1)!="")&&(bmd.items[bmd_index][bmr_list[i].field].toString().substring(0,1)!="x")) {
+                                              tn+=1;
+                                          }
+                                      }
+                                  }
+                                   }
+                                   tn2=0;
+                                   if ( bwiz[bwizcheck.module]!=undefined) {
+                                   tn2 =  bwiz[bwizcheck.module].requirements;
+                                   }
+                                   report_line3[checklist2[field]] = tn2-tn;
+                                  
+                                  
                               }
                               if (fn=="countneeded") {
                                   bwiz = report_config[section].badgewiz[badges].meta.module_status;
@@ -2920,6 +3186,53 @@ report_line2[checklist2[field]] = getAge(members_array.data[member].date_of_birt
            report_data.push(report_line2);
          }
       }
+    }
+    
+    if ((report_type=="Programme & Badges")) {
+        for(var section in report_config) {
+               var plist = (report_config[section].programme);
+               for (var progs in plist.items) {
+                  var report_line2 = new Object();
+                   
+                  for (var field in checklist ) {
+                      if ( checklist[field].substring(0,12)=="PL|Programme" ){
+                          var fn = checklist[field].substring(checklist[field].lastIndexOf("|")+1);
+                          report_line2[checklist2[field]] = plist.items[progs][fn];
+                           if (fn=="group") { report_line2[checklist2[field]] = roles_config[get_roles_section(section)].groupname; }
+                           if (fn=="section") { report_line2[checklist2[field]] = roles_config[get_roles_section(section)].sectionname; }
+                      }
+                  }
+                      var pitem = report_config[section].prog[plist.items[progs]['eveningid']];
+                       var p = pitem.badgelinks[plist.items[progs]['eveningid']].length;
+                    if (pitem.badgelinks[plist.items[progs]['eveningid']].length>0) {
+                        // We have badges
+                        for (var pb=0; pb<pitem.badgelinks[plist.items[progs]['eveningid']].length; pb++) {
+                            var report_line = new Object();  
+                            for (var key in report_line2) {
+                            //copy all the fields
+                              report_line[key] = report_line2[key];
+                            }
+                             for (var field2 in checklist ) {
+                                if ( checklist[field2].substring(0,8)=="PI|Progs" ){
+                                var fn = checklist[field2].substring(checklist[field2].lastIndexOf("|")+1);
+                                report_line[checklist2[field2]] = pitem.badgelinks[plist.items[progs]['eveningid']][pb][fn];
+                                }
+                             }
+                             report_data.push(report_line);
+                        }
+                        
+                  } else { 
+                      for (var field2 in checklist ) {
+                                if ( checklist[field2].substring(0,8)=="PI|Progs" ){
+                                var fn = checklist[field2].substring(checklist[field2].lastIndexOf("|")+1);
+                                report_line2[checklist2[field2]] = "";
+                                }
+                             }
+                      report_data.push(report_line2);
+                  }
+               
+               }
+        }
     }
 
     if ((report_type=="Events")|(report_type=="Events & QM Lists")) {
@@ -3788,7 +4101,7 @@ select_checks2();
 <a href="#"><span onclick="menu_closeNav();xls_dialog_open();">Save Data to Excel</span></a>
  <a href="#"><span onclick="api_settings_table()">Check OSM</span></a>
  <a href="#"><span onclick="$('#lib-thanks').dialog({ position: {'my': 'center',  at: 'center top+200', of: window } });$('#osmr_version').text(osmr_version);$('#relay_path_setting').val(relay_path); lib_thanks.dialog('open');">About</span></a>
- <a href="#"><span onclick="var win = window.open('https://mydonate.bt.com/donation/start.html?charity=111533', '_blank');
+ <a href="#"><span onclick="var win = window.open('https://2ndnewhawscouts.org.uk/wordpress-plugins-for-scout-websites/osmr-reporting-for-osm/#donate', '_blank');
   win.focus();">Donate</span></a>
   <a href="#"><span onclick="log_out()">Logout</span></a>
   
@@ -3799,6 +4112,7 @@ select_checks2();
 <span id="password_block">Password: <input type="password" name="password" id="password">-->
 Exclude Access Report<input type="checkbox" id="logon_access" name="logon_access">
 <button type="button" onclick="call_report()" id="logon_button">Log On</button></span></div>
+
 <div id="osmr_loggedon">
 <!--<button id="logout_button" type="button" onclick="log_out()">Log Out</button> --> 
 
@@ -3810,7 +4124,8 @@ Exclude Access Report<input type="checkbox" id="logon_access" name="logon_access
 </select></span>
 <span>Report Type:<select id='report_type' name="report_type" class="ms-choice" style="width: 200px;display: inline;">
 </select></span>
-<button type="button" onclick="select_fields()" id="osmr_field"><span class="tooltiptext">Run/Edit Report</span></button>
+<button type="button" onclick="select_fields()" id="osmr_field"><span class="tooltiptext">Run/Edit Report</span></button>&nbsp;Reads remaining: 
+<span id="rr"></span>&nbsp;Time before reset: <span id="rt"></span>&nbsp;<span id="rt_abs"></span>
 <div class="grid-select">
 <input id="pivottable" type="radio" name="render" value="pivot" checked="checked">
 
@@ -3945,9 +4260,9 @@ Delete: function () {delr_dialog.dialog( "close" );delete_report();}
 }});
  access= $('#logon_access').is(":checked");
 if (!access) {
-var dialog_array = [ "Members","Members & Badges","Members & Badges Details", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","User Access"];
+var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","User Access","Programme & Badges","Programme & Attendance"];
 } else {
-   var dialog_array = [ "Members","Members & Badges","Members & Badges Details", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List"]; 
+   var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","Programme & Attendance"]; 
 }
 for (dodrop in dialog_array)
 {
@@ -3992,7 +4307,8 @@ $(document).ready(function(){
 setInterval('cycleImages()', 7000);
 })
 
-</script>
+ 
+   // error_fkfdfjd();</script>
 </body>
 
 </html>
