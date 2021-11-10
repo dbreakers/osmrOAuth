@@ -57,6 +57,9 @@
 <link rel="stylesheet" type="text/css" href="https://www.2ndnewhawscouts.org.uk/osmr/multiple-select.css">
 <link rel="stylesheet" type="text/css" href="https://www.2ndnewhawscouts.org.uk/osmr/css/slick.grid.css">
 <link rel="stylesheet" type="text/css" href="https://www.2ndnewhawscouts.org.uk/osmr/css/osmr.css">
+<link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+<link rel="stylesheet" id="cluster_style-css" href="https://2ndnewhawscouts.org.uk/wp-content/plugins/campsites/dist/MarkerCluster.css?ver=ea704a3a16582300f0e62fcafa210021" type="text/css" media="all">
+<link rel="stylesheet" id="cluster_style2-css" href="https://2ndnewhawscouts.org.uk/wp-content/plugins/campsites/dist/MarkerCluster.Default.css?ver=ea704a3a16582300f0e62fcafa210021" type="text/css" media="all">
 
 <link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
 <script src='https://js.sentry-cdn.com/e7765bb8daf149f0adc902a3b52aec0c.min.js' crossorigin="anonymous"></script>
@@ -85,11 +88,13 @@
 <script type="text/javascript" src="https://www.2ndnewhawscouts.org.uk/osmr/scripts/slick.columnpicker.js"></script>
 <script type="text/javascript" src="https://www.2ndnewhawscouts.org.uk/osmr/scripts/xlsx.full.min.js"></script>
 <script type="text/javascript" src=" https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
-
+<script type="text/javascript" src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <!--<script type="text/javascript" src=" https://p10.secure.hostingprod.com/@www.2ndnewhawscouts.com/ssl/pdfmake.min.js"></script> -->
 <script type="text/javascript" src=" https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.33/pdfmake.js"></script>
 <script type="text/javascript" src=" https://www.2ndnewhawscouts.org.uk/osmr/vfs_fonts.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster-src.js"></script>
+<script type="text/javascript" src=" https://www.2ndnewhawscouts.org.uk/wp-content/plugins/osm_dashboards/Control.FullScreen.js"></script>
 </head>
 <body>
 <script>
@@ -98,6 +103,8 @@ var relay_path = "https://www.2ndnewhawscouts.org.uk/osmr/osmrelayoa2.php";
 var api_number = "42";
 var oauthcode = "";
 var osmr_version = "1.00.00";
+var postcode_list = [];
+var imd_list = [];
 var url = window.location.href
 var arr = url.split("/");
 if (arr[0]!="https:") { window.location.replace("https://www.2ndnewhawscouts.org.uk/osmr/osmroauth.html");};
@@ -114,7 +121,7 @@ $("#osmr_logon").toggle("slow");
 $("#osmr_loggedon").toggle("slow");
 }
 $.ajaxSetup({
-    async: true
+    async: true 
 });
   } 
 }
@@ -125,11 +132,13 @@ var script = document.createElement("script");
     script.src = "https://www.google.com/jsapi";
     script.type = "text/javascript";
     document.getElementsByTagName("head")[0].appendChild(script);
+var osm_colours = ['#7413dc','#00a794','#e22e12','#ffb4e5','#003982','#006ddf','#AAAAAA','#ffe627','#ba89ee','#80d3ca','#809cc1'];
  var sections = ""
  var patrols = ""
  var scouts = ""
  var roles = ""
  var terms = ""
+ var postcodes_lookup=[];
  var report_list = { 'reports' : [] };
  var template_report;
  var dialog
@@ -371,6 +380,8 @@ $("#DeleteReports").append("<option  value=\"reports\">"+report_list.reports[rep
 var options = {packages: ['corechart',"charteditor","timeline"], callback : initCharts};
 
 google.load('visualization', '1', options);
+
+var mymap = {};
       
 // }, false);
 
@@ -528,6 +539,8 @@ else
         } else
         {
           pdf_table_cell.text = c;
+      //    pdf_table_cell.font = "Icon";
+      //    pdf_table_cell.fontSize = 25;
         }
           
       //  
@@ -680,6 +693,9 @@ else
           pdf_table_cell.text  = aggregator.format(val);
           //td.setAttribute("data-value", val);
           //tr.appendChild(td);
+          if (pdf_table_cell.text =="&#10060;") { pdf_table_cell.text = "h"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'red'; }
+              if (pdf_table_cell.text =="&#9989;") { pdf_table_cell.text = "e"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green'; }
+                  if (pdf_table_cell.text =="&#10062;") { pdf_table_cell.text = "f"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green';}
            table_row.push(pdf_table_cell)    
         }
           if (($("#disp_totals_ck").prop("checked"))) {          
@@ -701,7 +717,7 @@ else
       var table_row = new Array;
       if ($("#disp_totals_ck").prop("checked")) {
       var pdf_table_cell = new Object; 
-      pdf_table_cell.text = "Total"
+      pdf_table_cell.text = "Total";
       pdf_table_cell.colSpan = rowAttrs.length + (colAttrs.length === 0 ? 0 : 1)
       table_row.push(pdf_table_cell);
       }
@@ -773,9 +789,51 @@ else
    //             pdf_doc_copy = $.extend(true, {}, pdf_doc);
 pdf_doc_copy = $.extend(true, {}, pdf_doc);
                  if (chartType=="Download") {
+                     pdfMake.fonts = {
+                    Roboto: {
+                        normal: 'Roboto-Regular.ttf',
+                        bold: 'Roboto-Medium.ttf',
+                        italics: 'Roboto-Italic.ttf',
+                        bolditalics: 'Roboto-MediumItalic.ttf'
+                        },
+                    fontello: {
+                        normal: 'fontello.ttf',
+                        bold: 'fontello.ttf',
+                        italics: 'fontello.ttf',
+                        bolditalics: 'fontello.ttf'
+                        },
+                    nunito: {
+                        normal: 'Nunito-Sans.ttf',
+                        bold: 'Nunito-Sans-Bold.ttf',
+                        italics: 'Nunito-Sans-Italic.ttf',
+                        bolditalics: 'Nunito-Sans-BoldItalic.ttf'
+                        }
+                        
+                };
                    pdfMake.createPdf(pdf_doc).download();
                 } else {
-                pdfMake.createPdf(pdf_doc).getDataUrl(function(outDoc) {
+                pdfMake.fonts = {
+                    Roboto: {
+                        normal: 'Roboto-Regular.ttf',
+                        bold: 'Roboto-Medium.ttf',
+                        italics: 'Roboto-Italic.ttf',
+                        bolditalics: 'Roboto-MediumItalic.ttf'
+                        },
+                    fontello: {
+                        normal: 'fontello.ttf',
+                        bold: 'fontello.ttf',
+                        italics: 'fontello.ttf',
+                        bolditalics: 'fontello.ttf'
+                        },
+                    nunito: {
+                        normal: 'Nunito-Sans.ttf',
+                        bold: 'Nunito-Sans-Bold.ttf',
+                        italics: 'Nunito-Sans-Italic.ttf',
+                        bolditalics: 'Nunito-Sans-BoldItalic.ttf'
+                        }
+                        
+                };
+                pdfMake.createPdf(pdf_doc,null).getDataUrl(function(outDoc) {
                 $("#pdf_viewer").attr("src", outDoc);
                 });}
                 result = "<iframe id=\"pdf_viewer\" width=100% style = \"min-width: 700px; height: 800px;\"><iframe>";    
@@ -1265,7 +1323,16 @@ function select_sections_open() {
 dialog_delay.dialog( "close" );
 //dialog.dialog( "open" );
 }
+
+//import * as Sentry from "@sentry/browser";
+
 function select_fields () {
+   
+        for(var property in section_config) {
+     //        Sentry.setUser({ id: section_config[property].groupname+" "+section_config[property].sectionname  });
+        }
+    
+     // Sentry.setUser({ id: section_config[section].groupname+" "+section_config[section].sectionname  });
     if (security==null) {
        $("#confirmation").text("You need to logon")
         dialog_confirm.dialog({ title: "Message" });
@@ -1300,12 +1367,23 @@ function select_fields () {
            $("#pivottable").prop("checked", true);
            $("#grid_menu_entry").html("Grid Layout");
            $("#pivot_menu_entry").html("&#10004; Pivot Layout");
+                 $("#map_menu_entry").html("Map Layout");
 
-          } else
-          {
+          } 
+          if (saved_report.hasOwnProperty("grid")) {
              $('input[name="outputtype"][value="grid"]').prop('checked', true);
              $("#gridtable").prop("checked", true);
              $("#grid_menu_entry").html("&#10004; Grid Layout");
+             $("#pivot_menu_entry").html("Pivot Layout");
+              $("#map_menu_entry").html("Map Layout");
+
+
+          }
+          if (saved_report.hasOwnProperty("map")) {
+             $('input[name="outputtype"][value="map"]').prop('checked', true);
+             $("#maptable").prop("checked", true);
+             $("#map_menu_entry").html("&#10004; Map Layout");
+             $("#grid_menu_entry").html("Grid Layout");
              $("#pivot_menu_entry").html("Pivot Layout");
 
 
@@ -1347,7 +1425,9 @@ function select_fields () {
     var report_type = $( "#report_type option:selected" ).text();
     get_data_array = [];
     get_data_array2 = [];
+    
     for(var section in report_config) {
+     //   Sentry.setUser({ id: section_config[section].groupname+" "+section_config[section].sectionname  });
         if (report_type == "Badge Stock") {
            var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/badges/stock/?action=getBadgeStock&section='+section_config[section].section_type+'&section_id='+section+'&term_id='+report_config[section].termid+'&seeIfShared=y';
@@ -1379,7 +1459,7 @@ function select_fields () {
             get_data_array.push(get_data_line);
         }
 
-        if ((report_type == "Members")|(report_type =="Programme & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges")|(report_type=="Events & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")|(report_type=="Members & Sections")) {
+        if ((report_type == "Members")|(report_type =="Programme & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges")|(report_type=="Events & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
             var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/settings/patrols/?action=get&sectionid='+section;
             report_config[section].patrol = "";
@@ -1483,9 +1563,16 @@ function select_fields () {
     }
     
     $( ".progressbar" ).text = "Loading Data";
+    }
+    try {
     if (get_data_array[0].type == "GET") {
         get_data_xhr(0,assemble_data) } else {get_data_post_xhr(0,assemble_data) }; 
-    }
+  }
+    catch (error) {
+          alert("We've hit an issue which may be due to the access you have in OSM (for reports that include members make sure you have Flexi Record Access)");
+          throw new Error("We has an issue with this report type "+report_type+ " ");
+    }    
+
 }
 
 function assemble_data() {
@@ -1498,7 +1585,7 @@ function assemble_data() {
      $( ".progress-label" ).text('Round 2');
      var report_type = $( "#report_type option:selected" ).text();
     for(var section in report_config) {
-        if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Events & Attendance")|(report_type=="Members & Sections")) {
+        if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Events & Attendance")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
         var members_array = JSON.parse(report_config[section].members);
         var mc = false;
         report_config[section].member_sections = new Array();
@@ -1524,6 +1611,19 @@ function assemble_data() {
                  get_data_line.data = report_config[section];
                  get_data_line.type = "GET";
                  get_data_line.field = "member_sections|"+members_array.data[scout].member_id;
+                 get_data_line.olddata = old_report_config[section];  
+             //    get_data_line.postvar = 'associated_type=member&context=members&associated_id='+members_array.data[scout].member_id;
+                 get_data_array.push(get_data_line);
+           }
+           if (report_type=="Members & WL") {
+                var get_data_line = new Object();
+                //https://www.onlinescoutmanager.co.uk/ext/members/contact/?action=getIndividual&sectionid=3320&scoutid=649811&termid=521815&context=members
+                //  https://www.onlinescoutmanager.co.uk/members/contact/?action=getIndividual&sectionid=3320&scoutid=491560&termid=521815&context=members
+                 get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/audittrail/?action=getAuditTrail&section_id='+section; 
+                 get_data_line.data = report_config[section];
+                 get_data_line.type = "POST";
+                 get_data_line.field = "member_changes|"+members_array.data[scout].member_id;
+                 get_data_line.postvar = 'section_id='+section+'&type=member&id='+members_array.data[scout].member_id;
                  get_data_line.olddata = old_report_config[section];  
              //    get_data_line.postvar = 'associated_type=member&context=members&associated_id='+members_array.data[scout].member_id;
                  get_data_array.push(get_data_line);
@@ -1700,8 +1800,11 @@ function assemble_data2() {
                            { "fieldname" : "MC|Core|patrol_role_short" ,  "fieldlabel" : "Short Role"},
                             { "fieldname" : "MC|Core|section_name" ,  "fieldlabel" : "Section Name"},
                            { "fieldname" : "MC|Core|group_name" ,  "fieldlabel" : "Group Name"},
-                           { "fieldname" : "MC|Core|timemovement" ,  "fieldlabel" : "Time as a Scout"}
-
+                           { "fieldname" : "MC|Core|timemovement" ,  "fieldlabel" : "Time as a Scout"},
+                           { "fieldname" : "MC|Core|timesection" ,  "fieldlabel" : "Time in Section"},
+                           { "fieldname" : "MC|Core|mbremailchk" ,  "fieldlabel" : "Member Email Check"},
+                           { "fieldname" : "MC|Core|emgemailchk" ,  "fieldlabel" : "Emergency Email Check"},
+                           { "fieldname" : "MC|Core|pcemailchk" ,  "fieldlabel" : "Primary Email Check"},
 
                           ];
                           
@@ -1809,7 +1912,9 @@ function assemble_data2() {
        { "fieldname" : "QI|Item|3", "fieldlabel" : "Location" },
        { "fieldname" : "QI|Item|8", "fieldlabel" : "Purchase Date" },
        { "fieldname" : "QI|Item|9", "fieldlabel" : "Renewal Price" },
-       { "fieldname" : "QI|Item|4", "fieldlabel" : "Notes" }
+       { "fieldname" : "QI|Item|4", "fieldlabel" : "Notes" },
+       { "fieldname" : "QI|Item|totalvalue", "fieldlabel" : "Total Value" },
+       { "fieldname" : "QI|Item|weight", "fieldlabel" : "Weight" }
         ]; 
     var pl_field_list = [
         { "fieldname" : "PL|Programme|title", "fieldlabel" : "Title" },
@@ -1831,6 +1936,21 @@ function assemble_data2() {
       var att_field_list = [
         { "fieldname" : "AT|Attendance|attendance", "fieldlabel" : "Attended?" },
          { "fieldname" : "AT|Attendance|attendances", "fieldlabel" : "Attended Symbol" }
+        ];
+      var wl_field_list = [
+        { "fieldname" : "WL|Added", "fieldlabel" : "Added to WL" },
+         { "fieldname" : "WL|Moved", "fieldlabel" : "Moved to Section" },
+           { "fieldname" : "WL|Ageadded", "fieldlabel" : "Full Age when Added" },
+               { "fieldname" : "WL|Ageonmove", "fieldlabel" : "Full Age when Moved" },
+                { "fieldname" : "WL|Ageaddeds", "fieldlabel" : "Age when Added" },
+               { "fieldname" : "WL|Ageonmoves", "fieldlabel" : "Age when Moved" },
+           { "fieldname" : "WL|TimeonWL", "fieldlabel" : "Time on WL" },
+            { "fieldname" : "WL|TimeonWLF", "fieldlabel" : "Time on WL Full" },
+               { "fieldname" : "WL|TimeonWLD", "fieldlabel" : "Time on WL Days" },
+        ];
+        
+        var map_field_list = [
+        { "fieldname" : "MQ|IMD", "fieldlabel" : "IMD" }
         ];
     var searchIDs = $('#fieldtable input:checked').map(function(){
         
@@ -1860,7 +1980,7 @@ function assemble_data2() {
     var report_type = $( "#report_type option:selected" ).text();
     $("#fieldlist").empty();
     $("#fieldlist").show();
-     if ((report_type=="Members & Badges")|(report_type=="Members")|(report_type=="Programme & Attendance")|(report_type=="Events & Attendance")|(report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Sections") ){
+     if ((report_type=="Members & Badges")|(report_type=="Members")|(report_type=="Programme & Attendance")|(report_type=="Events & Attendance")|(report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps") ){
     field_list = field_list + "<li>Members";
     field_list = field_list + "<ul><li>Core Fields";
     field_list = field_list + "<ul><li>Core Member Fields<ul>";
@@ -1884,7 +2004,9 @@ function assemble_data2() {
 
                 var chkval = "MA|" + fields_array['data'][fieldgroup].group_id + "|" + fields_array['data'][fieldgroup]['columns'][fieldlist].column_id; 
 var chklbl2 = "<label for=\""+chkval+"\">"+fields_array['data'][fieldgroup]['columns'][fieldlist].label+"</label>";
+                if ((report_type!="Members & Maps")|((report_type=="Members & Maps") & (chklbl.indexOf("Postcode")==-1))){  
                 field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+chklbl+ " " +  fields_array['data'][fieldgroup].group_id+"\" value=\""+chkval+"\" id=\""+chkval+"\""+is_checked(checklist,chkval)+"><label for=\""+chkval+"\">"+chklbl + " " +  fields_array['data'][fieldgroup].group_id + "</label><br></li>";
+                }
                   }
               }
               field_list = field_list + "</ul></li>";
@@ -1952,6 +2074,53 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
     //field_list = field_list + "</ul>";      
     field_list = field_list + "</li></ul>"; // Members
 }
+    if ((report_type=="Members & WL")){
+        field_list = field_list + "<li>Waiting List<ul>";
+        for (var core in wl_field_list) {
+             field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+wl_field_list[core].fieldlabel+"\" value=\""+wl_field_list[core].fieldname;
+        field_list = field_list + "\" id=\""+wl_field_list[core].fieldname+"\""+is_checked(checklist,wl_field_list[core].fieldname)+">"+wl_field_list[core].fieldlabel + "</li>";
+            
+        }
+         field_list = field_list + "</ul></li>"; // WL
+    } 
+    if ((report_type=="Members & Maps")){
+        field_list = field_list + "<li>Member Postcode Fields<ul>";
+          core_fields = true;
+          for(var section in report_config) {
+             if ((report_config[section].memberconfig !== "")&&(core_fields === true)) {
+                var fields_array = JSON.parse(report_config[section].memberconfig);
+                core_fields = false;
+                for(var fieldgroup in fields_array['data']) {
+                  // alert(fields_array['data'][fieldgroup].name);
+                  if (fields_array['data'][fieldgroup].is_considered_core == "yes") {
+                     // field_list = field_list + "<li>" + fields_array['data'][fieldgroup].name + "<ul>";
+                     for (var fieldlist in fields_array['data'][fieldgroup]['columns']) {
+                        if ( fields_array['data'][fieldgroup]['columns'][fieldlist].is_core == "yes" ) {
+                        var chklbl = fields_array['data'][fieldgroup]['columns'][fieldlist].label;
+                        if (chklbl.indexOf("Postcode")>-1) {
+                            var chkval = "MA|" + fields_array['data'][fieldgroup].group_id + "|" + fields_array['data'][fieldgroup]['columns'][fieldlist].column_id; 
+                            var chklbl2 = "<label for=\""+chkval+"\">"+fields_array['data'][fieldgroup]['columns'][fieldlist].label+"</label>";
+                            field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+chklbl+ " " +  fields_array['data'][fieldgroup].group_id+"\" value=\""+chkval+"\" id=\""+chkval+"\""+is_checked(checklist,chkval)+"><label for=\""+chkval+"\">"+chklbl + " " + fields_array['data'][fieldgroup].name + " " +fields_array['data'][fieldgroup].group_id + "</label><br></li>";
+                        }
+                  }
+              }
+             
+            }
+        }
+        }
+        if (core_fields === false) { break };
+    }
+     field_list = field_list + "</ul></li>";
+      
+        
+        field_list = field_list + "<li>Geodata<ul>";
+        for (var core in map_field_list) {
+             field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+map_field_list[core].fieldlabel+"\" value=\""+map_field_list[core].fieldname;
+        field_list = field_list + "\" id=\""+map_field_list[core].fieldname+"\""+is_checked(checklist,map_field_list[core].fieldname)+">"+map_field_list[core].fieldlabel + "</li>";
+            
+        }
+         field_list = field_list + "</ul></li>"; // WL
+    } 
     if ((report_type=="Members & Badges Details")|(report_type=="Members & Badges")|(report_type=="Badges")|(report_type=="Members & Challenge Badges") ){
     field_list = field_list + "<li>Badges<ul>";
     for (var core in badge_field_list) {
@@ -2261,6 +2430,34 @@ $( "#progressbar" ).progressbar({ value: 100 * ( get_data_array2.length / get_da
   data: $.param(obj),
   dataType: "json",
 success: function(data,status,req) {
+  if (req.responseText =='false') {
+        var ss = this.url.indexOf("section_id=");
+        if (ss>-1) { off = 11; } else { ss = this.url.indexOf("sectionid="); off = 10; };
+		sd = "NO section";
+		if (ss>-1) {
+			var se = this.url.indexOf("&",ss);
+			if (se==-1) { se=this.url.length; }
+			sl = this.url.substring(ss+off,se);
+			sd = roles_config[get_roles_section(sl)].sectionname;
+		}
+        
+      alert("We've hit an issue reading data - check your access in OSM for section "+sd+" "+get_data_array[c].field );
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd+" "+get_data_array[c].field);
+  }
+  if (data.hasOwnProperty('error')&(data.error != null)) {
+        var ss = this.url.indexOf("section_id=");
+        if (ss>-1) { off = 11; } else { ss = this.url.indexOf("sectionid="); off = 10; };
+		sd = "NO section";
+		if (ss>-1) {
+			var se = this.url.indexOf("&",ss);
+			if (se==-1) { se=this.url.length; }
+			sl = this.url.substring(ss+off,se);
+			sd = roles_config[get_roles_section(sl)].sectionname;
+		}
+        
+      alert("We've hit an issue reading data - check your access in OSM for section "+sd+" "+get_data_array[c].field );
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd+" "+get_data_array[c].field);
+  } 
   var index = "";
   var remaining = req.getResponseHeader('X-RateLimit-Remaining');
     $("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
@@ -2276,8 +2473,22 @@ success: function(data,status,req) {
 
        if (index=="") { get_data_array[c].data[get_data_array[c].field] = data; }
                     else 
+                     try {
                       { get_data_array[c].data[get_data_array[c].field][index] = data; }
-      
+                     }
+                     catch (error) {
+                         var ss = this.url.indexOf("section_id=");
+                         if (ss>-1) { off = 11; } else { ss = this.url.indexOf("sectionid="); off = 10; };
+                    		sd = "NO section";
+		                    if (ss>-1) {
+			                    var se = this.url.indexOf("&",ss);
+			                    if (se==-1) { se=this.url.length; }
+			                    sl = this.url.substring(ss+off,se);
+			                    sd = roles_config[get_roles_section(sl)].groupname+" "+roles_config[get_roles_section(sl)].sectionname;
+		                    }
+                            alert("We've hit an issue processing the data for section "+sd+" "+get_data_array[c].field+" an error has been logged with support"  );
+                            throw new Error("We has an issue processing data with this URL "+this.url+ " "+sd+" "+get_data_array[c].field);
+                     }
       if ((get_data_array.length -1)  != c ) {
             if (get_data_array[c+1].type == "GET") { get_data_xhr(c+1,f); } else {get_data_post_xhr(c+1,f); };
         } else { f();}
@@ -2462,6 +2673,18 @@ $.ajax({
    
 			data:get_data_array[c].postvar,
 			success: function(data,status,req){
+			     if (JSON.parse(data).hasOwnProperty('error')&(JSON.parse(data).error != null)) {
+			         var ss = this.data.indexOf("section_id=");
+			         sd = "NO section";
+			         if (ss>-1) {
+			             var se = this.data.indexOf("&",ss);
+			             if (se==-1) { se=this.data.length; }
+			             sl = this.data.substring(ss+11,se);
+			             sd = roles_config[get_roles_section(sl)].sectionname;
+			         }
+      alert("We've hit an issue reading data - check your access in OSM for section "+sd+" for "+get_data_array[c].field);
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd);
+  }    
 			      $("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
    var d = new Date();
   var n = d.getTime();
@@ -2515,6 +2738,30 @@ var exclusions;
 var groups;
 var sortcols;
 var slick_full_config = new Object();
+var map_full_config = new Object();
+
+
+
+function collect_mapfilters() 
+{
+     
+     exclusions = {};
+            $("#reportoutput").find('input.pvtFilter').not(':checked').each(function() {
+              var filter;
+              filter = $(this).data("filter");
+              if (exclusions[filter[0]] != null) {
+                return exclusions[filter[0]].push(filter[1]);
+              } else {
+                return exclusions[filter[0]] = [filter[1]];
+              }
+            });
+    // oldgroups = dataView.getGrouping();
+     return exclusions;
+} // collectmap
+
+
+
+
 function collect_slickfilters() 
 {
      sortcols= [];
@@ -2564,7 +2811,9 @@ return filter+":  " + g.value;
        }
        });
        });
-}
+} // collect
+
+
 function filterslick(item)
 {
     var ret;
@@ -2670,6 +2919,52 @@ function slickupdate(dataView,grid,checklist,event,grp) {
      $("#config_json").val(JSON.stringify(slick_full_config, undefined, 2));
 }
 
+function get_postcodes_bulk(section,checklist,checklist2) {
+    var fld = -1;
+    var limit = 99;
+    for(var f=0; f<checklist2.length;f++) {
+        if (checklist2[f].indexOf("Postcode")!=-1) {
+        fld = f;
+        }
+    };
+    pl = [];
+    if (fld>-1) {
+        var fn = checklist[fld].substring(checklist[fld].lastIndexOf("|")+1);
+        var gp = checklist[fld].substring(checklist[fld].indexOf("|")+1,checklist[fld].lastIndexOf("|"));
+        var members_array = JSON.parse(report_config[section].members);
+        for( var member in members_array.data) {  
+          pc = members_array.data[member].custom_data[gp][fn];
+          if (postcode_list.find(a=>(a.query==pc))==undefined) {
+          pl.push(pc);
+          }
+        }
+    //    var a = [ {'postcode':'KT15 1LG'}, {'postcode':'KT15 3AS'}];
+    pl.sort();
+    pl = pl.filter((e, i, a) => e !== a[i - 1]);
+    copy_pl = Array.from(pl);
+    while (copy_pl.length>0) {
+    pls = copy_pl.splice(0,limit);    
+        l = pls.map((p)=> {return ("postcodes%5B%5D="+encodeURIComponent(p))});
+   if (pls.length>0) {    
+   $.ajax({
+    type: "POST",
+    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+    url:'https://api.postcodes.io/postcodes',
+    data: l.join("&"),
+    success: function(html) {
+      arrReturn = html;
+    },
+    async:false
+  });
+    }
+//    postcode_list
+postcode_list = postcode_list.concat(arrReturn.result);
+}
+        
+    }
+
+}
+
 function select_checks() {
     dialog2.dialog( "close" );
   //   dialog3.dialog( "open" );
@@ -2687,16 +2982,84 @@ dialog_delay.dialog( "open" );
     });
     var month_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     var badge_types = [ "Challenge", "Activity","Staged", "Core"];
-  
+    postcode_list=[];
+    imd_list=[];
     var checklist = searchIDs.get();
     var checklist2 = searchIDs2.get();
     var report_type = $( "#report_type option:selected" ).text();
     report_data = [];
    // ga('send', 'event', 'Report', 'OSMR', report_type);
     // Members and Members & Badges
-    if ((report_type=="Programme & Attendance")|(report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Members & Sections")) {
+    if ((report_type=="Programme & Attendance")|(report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
     for(var section in report_config) {
         var members_array = JSON.parse(report_config[section].members);
+        if (report_type=='Members & Maps')   {
+               
+                get_postcodes_bulk(section,checklist,checklist2);
+                lsoa=[];
+                for (pc=0;pc<postcode_list.length;pc++){
+                    if (postcode_list[pc].result!=null){
+                       lsoa.push(postcode_list[pc].result.codes.lsoa);
+                    }
+                }
+                lsoa = [...new Set(lsoa.map(item => item))];
+                if (checklist.find(a=>a=="MQ|IMD")!=undefined) {
+                
+                for (pc=0;pc<lsoa.length;pc++){
+                    arrReturn="";
+                    $.ajax({
+                         type: "GET",
+                        
+                         url:'https://services3.arcgis.com/ivmBBrHfQfDnDf8Q/arcgis/rest/services/Indices_of_Multiple_Deprivation_(IMD)_2019/FeatureServer/0/query?where=lsoa11cd%20%3D%20%27'+lsoa[pc]+'%27&outFields=*&returnGeometry=false&returnDistinctValues=true&outSR=4326&f=json',
+                         success: function(html) {
+                            arrReturn = html;
+                            },
+                        async:false
+                    });
+                    if (arrReturn.hasOwnProperty('features')&(arrReturn.features.length!=0)) {
+                        v = new Object;
+                        v.lsoa = lsoa[pc];
+                        v.imd = arrReturn.features[0].attributes['IMD_Decile'];
+                        imd_list.push(v);
+                    } else
+                    {
+                         arrReturn="";
+                    $.ajax({
+                         type: "GET",
+                     // https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Index_of_Multiple_Deprivation_December_2016_Lookup_in_Scotland/FeatureServer/0/query?where=dz11cd%20%3D%20'".$lsoa11cd."'&outFields=*&outSR=4326&f=json
+                         url:"https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Index_of_Multiple_Deprivation_December_2016_Lookup_in_Scotland/FeatureServer/0/query?where=dz11cd%20%3D%20'"+lsoa[pc]+"'&outFields=*&outSR=4326&f=json",
+                         success: function(html) {
+                            arrReturn = html;
+                            },
+                        async:false
+                    });
+                      if (arrReturn.hasOwnProperty('features')&(arrReturn.features.length!=0)) {
+                        v = new Object;
+                        v.lsoa = lsoa[pc];
+                        v.imd = parseInt(100*(arrReturn.features[0].attributes['imd16']/6976));
+                        imd_list.push(v);
+                    } else {
+                        arrReturn="";
+                    $.ajax({
+                         type: "GET",
+                     // https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Index_of_Multiple_Deprivation_December_2019_Lookup_in_Wales/FeatureServer/0/query?f=json&where=(lsoa11cd%20%3D%20%27'.$lsoa11cd.'%27)%20AND%20(1%3D1)&returnGeometry=false&spatialRel=esriSpatialRelIntersects&outFields=*&orderByFields=FID%20ASC&resultOffset=0&resultRecordCount=50&cacheHint=true&quantizationParameters=%7B%22mode%22%3A%22edit%22%7D
+                         url:"https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Index_of_Multiple_Deprivation_December_2019_Lookup_in_Wales/FeatureServer/0/query?f=json&where=(lsoa11cd%20%3D%20%27"+lsoa[pc]+"%27)%20AND%20(1%3D1)&returnGeometry=false&spatialRel=esriSpatialRelIntersects&outFields=*&orderByFields=FID%20ASC&resultOffset=0&resultRecordCount=50&cacheHint=true&quantizationParameters=%7B%22mode%22%3A%22edit%22%7D",
+                         success: function(html) {
+                            arrReturn = html;
+                            },
+                        async:false
+                    });
+                        if (arrReturn.hasOwnProperty('features')&(arrReturn.features.length!=0)) {
+                        v = new Object;
+                        v.lsoa = lsoa[pc];
+                        v.imd = parseInt(100*(arrReturn.features[0].attributes['wimd_2019']/1909));
+                        imd_list.push(v);
+                        }
+                           }
+                    }
+                }
+                }
+            }
         for( var member in members_array.data) {  
            var report_line = new Object();
           for (var field in checklist ) {
@@ -2711,8 +3074,112 @@ dialog_delay.dialog( "open" );
                      if (fn=="agejoined") { if (members_array.data[member].joined!="0000-00-00") {report_line[checklist2[field]] = getAge(members_array.data[member].date_of_birth,members_array.data[member].joined,"s");} else {report_line[checklist2[field]] =""; }};
                      if (fn=="age_years") { report_line[checklist2[field]] = getAge(members_array.data[member].date_of_birth,"","y"); };
                      if (fn=="birth_month") { report_line[checklist2[field]] = month_list[(new Date(members_array.data[member].date_of_birth).getMonth())]; };
-                  if (fn=="timemovement") { report_line[checklist2[field]] = getAge(members_array.data[member].joined,"","s"); };
-              }
+                  if (fn=="timemovement") { report_line[checklist2[field]] = getAge(members_array.data[member].started,"","s"); };
+                   if (fn=="timesection") { report_line[checklist2[field]] = getAge(members_array.data[member].joined,"","s"); };
+                 if (fn=="mbremailchk") {
+                     
+                     	report_line[checklist2[field]] = "";
+	for (var me = 12; me < 15; me++) {
+		if (me == 12) {
+			var mes = "Member Email 1";
+		} else {
+			var mes = "Member Email 2";
+		}
+		if (members_array.data[member]['custom_data'][6].hasOwnProperty(me)&&members_array.data[member]['custom_data'][6][me]!="") {
+			var mcs = "Primary Contact ";
+			for (var mc = 1; mc < 3; mc++) {
+				mcs = "Primary Contact " + mc;
+				if ((members_array.data[member]['custom_data'][mc].hasOwnProperty("12"))) {
+					if (members_array.data[member]['custom_data'][6][me] == (members_array.data[member]['custom_data'][mc][12])) {
+					     if (report_line[checklist2[field]]!="") {report_line[checklist2[field]]+=",";}
+						report_line[checklist2[field]] += mcs + " Email 1 matches " + mes;
+					}
+				}
+				if ((members_array.data[member]['custom_data'][mc].hasOwnProperty("13"))) {
+					if (members_array.data[member]['custom_data'][6][me] == (members_array.data[member]['custom_data'][mc][13])) {
+					     if (report_line[checklist2[field]]!="") {report_line[checklist2[field]]+=",";}
+						report_line[checklist2[field]] += mcs + " Email 2 matches " + mes;
+					}
+				}
+			}
+		}
+	}
+                 }
+   if (fn=="pcemailchk") {
+   	report_line[checklist2[field]] = "";
+   for (var me = 12; me < 15; me++) {
+      if (me == 12) {
+			var mes = "Primary Contact 1 Email 1";
+		} else {
+			var mes = "Primary Contact 1 Email 2";
+		}
+      for (var mc = 12; me < 15; me++) {
+           if (mc == 12) {
+			var mcs = "Primary Contact 2 Email 1";
+		} else {
+			var mcs = "Primary Contact 2 Email 2";
+		}
+	    if ((members_array.data[member]['custom_data'][1].hasOwnProperty(me))) {
+	        if ((members_array.data[member]['custom_data'][2].hasOwnProperty(mc))) {
+	           if  (members_array.data[member]['custom_data'][1][me]==members_array.data[member]['custom_data'][2][mc]) {
+	               if (members_array.data[member]['custom_data'][1][me]!="") {
+	                     if (report_line[checklist2[field]]!="") {report_line[checklist2[field]]+=",";}
+	                     report_line[checklist2[field]] += mcs + " matches " + mes;
+	               }
+	           }
+	        } 
+	    }     
+      }
+   }
+    
+   }   
+    if (fn=="emgemailchk") {
+    	report_line[checklist2[field]] = "";          
+    for (me = 12; me < 15; me++) {
+        if (me == 12) {
+			var mes = " Emergency Email 1";
+		} else {
+			var mes = " Emergency Email 2";
+		}
+        if 	(members_array.data[member]['custom_data'].hasOwnProperty('3')) {
+            if (members_array.data[member]['custom_data'][3].hasOwnProperty(me)&members_array.data[member]['custom_data'][3][me]!="") {
+                	for (mc = 1; mc < 3; mc++) {
+				        mcs = " Primary Contact " + mc;
+				         
+				        if ((members_array.data[member]['custom_data'][mc].hasOwnProperty("12"))) {
+				            
+					        if (members_array.data[member]['custom_data'][3][me] == (members_array.data[member]['custom_data'][mc][12])) {
+					           if (report_line[checklist2[field]]!="") {report_line[checklist2[field]]+=",";}
+						       report_line[checklist2[field]] += mcs + " Email 1" +" matches " + mes;
+					        }
+				        }
+				        if ((members_array.data[member]['custom_data'][mc].hasOwnProperty("13"))) {
+				            
+					       if (members_array.data[member]['custom_data'][3][me] == (members_array.data[member]['custom_data'][mc][13])) {
+					            if (report_line[checklist2[field]]!="") {report_line[checklist2[field]]+=",";}
+						        report_line[checklist2[field]] += mcs + " Email 2 matches " + mes;
+					        }
+				        }
+				        
+				        
+				        
+				        
+                	}
+            }
+        }
+    }
+       
+             
+             
+             
+             
+             
+             
+                     
+                  }  
+              } // Core
+              
+              
               if ( checklist[field].substring(0,2)=="MA" ){
                 var fn = checklist[field].substring(checklist[field].lastIndexOf("|")+1);
                // alert(checklist[field].indexOf("|")+1);
@@ -2723,7 +3190,8 @@ dialog_delay.dialog( "open" );
                   var fn = checklist[field].substring(checklist[field].lastIndexOf("|")+1);
                   var gp = checklist[field].substring(checklist[field].indexOf("|")+1,checklist[field].lastIndexOf("|"));
                   if (report_config[section].flexirecords[gp]!=null){
-                  var flx = JSON.parse(report_config[section].flexirecords[gp]);
+                  var flx =report_config[section].flexirecords[gp]; //  JSON.parse(report_config[section].flexirecords[gp]);
+                  report_line[checklist2[field]] = ""
                   for (var flxm in flx.items) {
                       if (flx.items[flxm].scoutid==member) {
                           report_line[checklist2[field]] = flx.items[flxm][fn];  
@@ -2736,6 +3204,7 @@ dialog_delay.dialog( "open" );
               report_data.push(report_line);
             };
             if (report_type=='Members & Sections') {
+              
                 var sl = report_config[section].member_sections[member];
                 
                 report_line2 =  Object.assign({}, report_line);
@@ -2751,6 +3220,88 @@ dialog_delay.dialog( "open" );
                         report_data.push(report_line3);
                     }
                 }
+            }
+            if (report_type=='Members & WL') {
+                  if (report_config[section].hasOwnProperty('member_changes|'+member)) {
+                  var sl = JSON.parse(report_config[section]['member_changes|'+member]); } else {sl={};}
+                 
+                       for (var field in checklist ) {
+                            var fn = checklist[field].substring(checklist[field].lastIndexOf("|")+1);
+                            if ( checklist[field].substring(0,2)=="WL" ){
+                                if ((fn=='Added')|(fn=='Ageadded')|(fn=='TimeonWL')|(fn=='Ageaddeds')|(fn=='TimeonWLF')|(fn=='TimeonWLD')) {
+                                     fdate="";
+                                     if (sl.hasOwnProperty('status')) {
+                                         for(var i=0;i<sl.data.length;i++){
+                                             if ((sl.data[i].type=="members")&(sl.data[i].code=="add")&(fdate=="")) {
+                                                 fdate = sl.data[i].date_raw;
+                                             }
+                                         }
+                                     }
+                                     if (fn=='Added') {
+                                     report_line[checklist2[field]]=fdate.substring(0,10);
+                                     }
+                                     if (fn=='Ageadded') {
+                                     report_line[checklist2[field]]=getAge(members_array.data[member].date_of_birth,fdate.substring(0,10),"a");
+                                     }
+                                     if (fn=='Ageaddeds') {
+                                     report_line[checklist2[field]]=getAge(members_array.data[member].date_of_birth,fdate.substring(0,10),"s");
+                                     }
+                                     if ((fn=="TimeonWL")|(fn=='TimeonWLF')|(fn=='TimeonWLD')) {
+                                         stdate = fdate;
+                                     }
+                                }
+                                 if ((fn=='Moved')|(fn=='TimeonWL')|(fn=='Ageonmove')|(fn=='Ageonmoves')|(fn=='TimeonWLF')|(fn=='TimeonWLD')) {
+                                     fdate="";
+                                     if (sl.hasOwnProperty('status')) {
+                                         for(var i=0;i<sl.data.length;i++){
+                                             if ((sl.data[i].type=="members")&(sl.data[i].code=="moved-from-waiting")) {
+                                                 fdate = sl.data[i].date_raw;
+                                             }
+                                         }
+                                     }
+                                     if (fn=='Moved') {
+                                     report_line[checklist2[field]]=fdate.substring(0,10);
+                                     }
+                                     if (fn=='Ageonmove') {
+                                     report_line[checklist2[field]]= getAge(members_array.data[member].date_of_birth,fdate.substring(0,10),"a");
+                                     }
+                                     if (fn=='Ageonmoves') {
+                                     report_line[checklist2[field]]= getAge(members_array.data[member].date_of_birth,fdate.substring(0,10),"s");
+                                     }
+                                     if (fn=='TimeonWL') {
+                                     report_line[checklist2[field]]=getAge(stdate.substring(0,10),fdate.substring(0,10),"s");
+                                     }
+                                      if (fn=='TimeonWLF') {
+                                     report_line[checklist2[field]]=getAge(stdate.substring(0,10),fdate.substring(0,10),"b");
+                                     }
+                                      if (fn=='TimeonWLD') {
+                                     report_line[checklist2[field]]=getAge(stdate.substring(0,10),fdate.substring(0,10),"c");
+                                     }
+                                }
+                            }    
+                       }    
+                       report_data.push(report_line);
+                  }
+            if (report_type=='Members & Maps')   {
+                 for (var field in checklist ) {
+                      var fn = checklist[field].substring(checklist[field].lastIndexOf("|")+1);
+                      if (fn=='IMD') {
+                          report_line.imd = "";
+                          for (i in report_line) {
+                             if (i.indexOf('Postcode')>-1) {
+                               pc = report_line[i];
+                               ll = postcode_list.find(a=>(a.query==pc));
+                                if (ll!=undefined&&ll.result!=null) {
+                                    lsoa = ll.result.codes.lsoa
+                                    imd = imd_list.find(a=>a.lsoa==lsoa);
+                                    report_line.IMD = imd.imd;
+                                }    
+                             }
+                             
+                          }
+                      }
+                 }    
+                report_data.push(report_line);
             }
             if (report_type=='Programme & Attendance') {
                 var progslist = report_config[section].programme.items;
@@ -3121,6 +3672,22 @@ report_line2[checklist2[field]] = getAge(members_array.data[member].date_of_birt
              if (fn=="name") { report_line2[checklist2[field]] = qmilist.data.list.name;} else {
              report_line2[checklist2[field]] = qmilist.data.rows[items][fn];
              }   
+             if (fn=="totalvalue") {
+                 report_line2[checklist2[field]] = qmilist.data.rows[items][9]*qmilist.data.rows[items][6];
+                 if (isNaN(report_line2[checklist2[field]])) {report_line2[checklist2[field]]=0;}
+             }
+             if (fn=="weight") {
+                 report_line2[checklist2[field]]=0;
+                 if (qmilist.data.rows[items].hasOwnProperty("4")) {
+                 s = qmilist.data.rows[items][4].indexOf("WEIGHT:");
+                 if (s!=-1) {
+                    e = qmilist.data.rows[items][4].indexOf("\n",s);
+                    if (e==-1) {e=qmilist.data.rows[items][4].length;}
+                    report_line2[checklist2[field]] = qmilist.data.rows[items][4].substr(s+7, e-(s+7));
+                   // if (isNaN(report_line2[checklist2[field]])) {report_line2[checklist2[field]]=0;}
+                 }
+                 }
+             }
              if (report_line2[checklist2[field]]==undefined) {report_line2[checklist2[field]]="";}
            }
            report_data.push(report_line2);
@@ -3303,140 +3870,145 @@ report_line2[checklist2[field]] = getAge(members_array.data[member].date_of_birt
 dialog_delay.dialog( "close" );
 select_checks2();
 }
-function select_checks2() {
 
-var searchIDs = $('#fieldtable input:checked').map(function(){ return $(this).val(); });
-    var searchIDs2 = $('#fieldtable input:checked').map(function(){ return $(this).attr("name");});
- var checklist = searchIDs.get();
-    var checklist2 = searchIDs2.get();
-ga('send', 'event', 'Report', security.userid, $("#report_type option:selected" ).text());
-Slick.Data.GroupItemMetadataProvider();
-   
-    dataView = new Slick.Data.DataView( ); 
-    var Refresh = function(config) {  var config_copy = JSON.parse(JSON.stringify(config));
-                    //delete some values which are functions
-                      delete config_copy["aggregators"];
-                      delete config_copy["renderers"];
-                      if ($("#saveas_filters").val()!="on") {
-                    //    delete config_copy["exclusions"];
-                      }
-                      delete config_copy["sorters"];                                    
-                      delete config_copy["derivedAttributes"];
-                    //delete some bulky default values
-                     // delete config_copy["rendererOptions"];
-                      delete config_copy["localeStrings"];
-   $("#SavedReports").val("blank");
-   disp($("input[name='display_total']:checked").val()=="on");
-   var searchIDs = $('#fieldtable input:checked').map(function(){    
-      return $(this).val();
-    });
-    var checklist = searchIDs.get();
-        var full_config = new Object();
-            full_config.pivot = config_copy;
-            full_config.report_type =     $( "#report_type option:selected" ).text();
-            full_config.rotate = [];
-            $("#reportoutput").find('input.pvtrotate:checked').each(function() {
-            full_config.rotate.push($(this).data("rotate")); 
-            });
-            full_config.fields = checklist;
-            // full_config.display_total = ($("#dialog-form3 input[name='display_total']:checked").val()=="on");
-                    // $("#config_json").val(JSON.stringify(config_copy, undefined, 2));
-            $("#config_json").val(JSON.stringify(full_config, undefined, 2));
- };
-    
-		var sortAs =           $.pivotUtilities.sortAs;
-        var naturalSort2 =           $.pivotUtilities.naturalSort2;
-        var renderers = $.extend($.pivotUtilities.renderers, $.pivotUtilities.export_renderers,
-                        $.pivotUtilities.gchart_renderers, $.pivotUtilities.pdf_renderers,$.pivotUtilities.excel_renderers);
-        var agg = "Count";
-        var rows = new Array();
-        var cols = new Array();
-        var vals = new Array();
-        var rendname = "Table";
-        var rotate = new Array();
-        var exclusions = new Object;
-        var inclusions = new Object;
-        var refresh_layout = false;
-        if($("#SavedReports option:selected").text() != "") {
-        if ($("#SavedReports option:selected").hasClass("template")) {
-        for(var i = 0; i < template_report.reports.length;  i++) {
-           if (template_report.reports[i].name==$("#SavedReports option:selected").text()) {
-             var saved_report = JSON.parse(template_report.reports[i].def);
-           }
-         }  
-       } else {
-         for (var report in report_list.reports) {
-        if (report_list.reports[report].name==$("#SavedReports option:selected").text()) {
-        var saved_report = JSON.parse(report_list.reports[report].def);
-         }
-        }
-        }
-        //var saved_report = JSON.parse(GM_getValue($("#SavedReports option:selected").text()));
-        $("#SavedReports").val("blank");
-         if (saved_report.hasOwnProperty("pivot")) {
-         rows = saved_report.pivot.rows;
-         rendname = saved_report.pivot.rendererName;
-         if(typeof saved_report.pivot.exclusions  === "undefined") {
-         } else {  
-exclusions = saved_report.pivot.exclusions;
-inclusions = saved_report.pivot.inclusions;
+
+function onEachFeature(feature, layer) {
+		var popupContent = "";
+		if (feature.properties && feature.properties.popupContent) {
+			popupContent += feature.properties.popupContent;
+		}
+		layer.bindPopup(popupContent);
 }
-         cols = saved_report.pivot.cols;
-         vals = saved_report.pivot.vals;
-         rotate = saved_report.rotate;
-         disp(saved_report.display_total);
-                $("#dialog-form3 input[name='display_total']").prop('checked',saved_report.display_total); 
-            
-         refresh_layout = true;
-         agg = saved_report.pivot.aggregatorName;
-        } else {slick_full_config = saved_report; }
-        	
-        }
-		var pvtOpts = {
-			renderers: renderers,
-            onRefresh: Refresh,
-            rendererName : rendname,
-            rows: rows,
-            cols: cols,
-            vals: vals,
-            exclusions: exclusions,
-            inclusions: inclusions,
-            rotate : rotate,
-            sorters: function(attr) {
-                        if(attr == "Month of Birth") {
-                            return sortAs(["Jan","Feb","Mar","Apr", "May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]);
-                        }
-                        if((attr == "Patrol Role")|(attr == "Role ID")) {
-                            return naturalSort2();
-                        }
-            },
-			aggregatorName : agg
-		};
 
- 
-//debugger;
-   
-var display_option 
-display_option = $('input[name=outputtype]:checked').val();
-display_option = $('input[type=radio][name=render]:checked').val();
-    if (display_option=='pivot') {
-    $("#reportoutput").pivotUI(report_data, pvtOpts,refresh_layout);
-    } else {
- 
+function update_map_key(unique,prop2,exclusions) {
+    $(".mapkey").html("Key for "+prop2+":");
+    if (exclusions.hasOwnProperty(prop2)) {
+         ex =  exclusions[prop2];
+        } else { ex=[];}
+    unique2 = [];    
+    for (rd=0; rd<report_data.length;rd++) {
+        include = true;
+        for(field in exclusions) {
+            for (exv=0;exv<exclusions[field].length;exv++){
+                if (report_data[rd][field]==exclusions[field][exv]) { include=false; }
+            }
+        }
+        if (include) { unique2.push(report_data[rd][prop2]) }
+        
+    }
+    for (mk=0;mk<unique.length;mk++){
+        col = mk%osm_colours.length;
+       // if (!(ex.findIndex(exi=>exi==unique[mk])>-1)) {
+          if (unique2.findIndex(exi=>exi==unique[mk])>-1) {
+            
+            $(".mapkey").append("&nbsp;<span style='color:"+osm_colours[mk%osm_colours.length]+"'>&#9608;&nbsp;</span>"+unique[mk])
+            if (unique[mk]=="") { $(".mapkey").append("Blank");}
+         }
+    }
+    if ($( "#report_type option:selected" ).text()!="Members & Maps") {
+        $(".mapkey").html("<br>You need to select Report Type Members & Maps and a postcode field for Mapping");
+    }
+}
+	
+	
+function refresh_map() {
+     mymap.removeLayer(markers);
+       map_full_config.groupby =  $( "#groupby option:selected" ).text();
+        $("#config_json").val(JSON.stringify(map_full_config, undefined, 2));
+    //    mymap.removeLayer(current_geojson);
+    iconSettings = {
+        mapIconUrl: '<svg version="1" xmlns="http://www.w3.org/2000/svg" style="width: 30px; height: 40px;" ><path fill="{mapIconColor}" stroke="#FFF" stroke-width="1" stroke-miterlimit="10" d="m14.095833,1.55c-6.846875,0 -12.545833,5.691 -12.545833,11.866c0,2.778 1.629167,6.308 2.80625,8.746l9.69375,17.872l9.647916,-17.872c1.177083,-2.438 2.852083,-5.791 2.852083,-8.746c0,-6.175 -5.607291,-11.866 -12.454166,-11.866zm0,7.155c2.691667,0.017 4.873958,2.122 4.873958,4.71s-2.182292,4.663 -4.873958,4.679c-2.691667,-0.017 -4.873958,-2.09 -4.873958,-4.679c0,-2.588 2.182292,-4.693 4.873958,-4.71z"/></svg>',
        
-        var report_output_divs, triangleLink, field_div, btn, field
-    //    if (1==1) {
- report_output_divs = $("<ul>").addClass("reportfields").attr("id", "listfields");
-  
-  for ( field in checklist ) { 
-      if (columnsizes.hasOwnProperty(checklist2[field])==false) 
-      {
-          columnsizes[checklist2[field]] = 100;
-      };
-      // Assemble Unique Values & Counts
-       var consolidated, consolidatedc 
-             
-        // Start of fn
+        mapIconColor: '#cc756b',
+        mapIconColorInnerCircle: '#fff',
+        pinInnerCircleRadius: 0
+    };
+    
+divIcon = L.divIcon({
+                        className: "leaflet-data-marker",
+                        html: L.Util.template(iconSettings.mapIconUrl, iconSettings),
+                        iconAnchor: [12, 32],
+                        iconSize: [25, 40],
+                        popupAnchor: [0, -28] 
+                         
+                    });
+    current_geojson = L.geoJSON(null, {onEachFeature: onEachFeature,  
+                                     filter: function(feature, layer) {
+                                         exclude = false;
+                                         for(field in exclusions) {
+                                            for (exv=0;exv<exclusions[field].length;exv++){
+                                                if (feature.properties.filtervalue[field]==exclusions[field][exv]) { exclude = true; }
+                                            }
+                                         }
+                                            return (!exclude);
+                                        }, 
+                                    pointToLayer: function (feature, latlng) {
+           iconSettings.mapIconColor =  feature.properties.iconcolor;
+		divIcon = L.divIcon({
+                        className: "leaflet-data-marker",
+                        html: L.Util.template(iconSettings.mapIconUrl, iconSettings),
+                        iconAnchor: [12, 32],
+                        iconSize: [25, 40],
+                        popupAnchor: [0, -28] 
+                         
+                    });
+				return  L.marker(latlng,{icon: divIcon}) 
+            
+    }});
+    prop = "";
+    prop2 = "";
+    for (l in report_data[0]){ 
+        if (l.indexOf("Postcode")>-1) {prop=l;}
+        if ((l.indexOf("Postcode")==-1) && (l.indexOf("Full Name")==-1)&& (l.indexOf("id")==-1)) {prop2=l;}
+    }
+    prop2= $( "#groupby option:selected" ).text();
+    var unique = [...new Set(report_data.map(item => item[prop2]))];
+    unique.sort();
+    update_map_key(unique,prop2,exclusions);
+     markers  = L.markerClusterGroup();    
+    gf = [];
+    for(var i=0;i<report_data.length;i++){
+         iconSettings.mapIconColor = osm_colours[unique.findIndex(a=>a==report_data[i][prop2])%osm_colours.length];
+         pc = report_data[i][prop];
+         if (report_data[i].hasOwnProperty("Full Name")) {fn = report_data[i]["Full Name"] } else {fn =pc}
+         ll = postcode_list.find(a=>(a.query==pc));
+         if (ll!=undefined&&ll.result!=null) {
+            var geojsonFeature = {
+            "type": "Feature",
+            "properties": {
+            "popupContent": fn+"<br>"+report_data[i][prop2],
+            "filtervalue": report_data[i], 
+            "iconcolor": osm_colours[unique.findIndex(a=>a==report_data[i][prop2])%osm_colours.length]
+            },
+            "geometry": {
+            "type": "Point",
+            "coordinates": [ll.result.longitude,ll.result.latitude]
+            }
+            };   
+       //      current_geojson.addData(geojsonFeature);
+       gf.push(geojsonFeature)
+        }
+        
+       
+       
+    }
+ //    current_geojson.addData(gf);
+    
+    current_geojson.addData(gf);
+       markers.addLayer(current_geojson);
+  mymap.addLayer(markers);
+ // mymap.removeLayer(current_geojson); 
+    //   markers.addLayer(current_geojson);
+    //  mymap.addLayer(markers);
+    //  mymap.removeLayer(current_geojson);
+    if (markers.getBounds().hasOwnProperty("_northEast")){
+  mymap.fitBounds(markers.getBounds());
+ 
+    }
+}
+	
+function select_checks2() {
+     // Start of fn
         
         
       fndd = function(c) {
@@ -3576,6 +4148,284 @@ display_option = $('input[type=radio][name=render]:checked').val();
   
         //// ENd of fn
         
+        
+         fnddmap = function(c) {
+          var attrElem, btns, checkContainer, filterItem, filterItemExcluded, hasExcludedItem, keys, len3, o, ref2, showFilterList, triangleLink, updateFilter, v, valueList;
+          
+           // keys = (function() {
+          //  var results;
+          //  results = [];
+          //  for (k in axisValues[c]) {
+         //     results.push(k);
+        //    }
+        //    return results;
+        //    })();   // keys
+          if (map_full_config.hasOwnProperty("exclusions")) { exclusions = map_full_config.exclusions };  
+          hasExcludedItem = false;
+          if (exclusions.hasOwnProperty(c)==true) {  hasExcludedItem = true; };
+          valueList = $("<div>").addClass('pvtFilterBox').hide();
+          valueList.append($("<h4>").text(c + " (" + consolidated.length + ")"));
+          //if (keys.length > opts.menuLimit) {
+         //   valueList.append($("<p>").html(opts.localeStrings.tooMany));
+         // } else {
+            
+            btns = $("<p>").appendTo(valueList);
+         
+          btns.append($("<br>"));
+            btns.append($("<button>", {
+              type: "button"
+            }).html("Select All").bind("click", function() {
+              return valueList.find(".pvtCheckContainer input:visible").prop("checked", true);
+            }));
+            btns.append($("<button>", {
+              type: "button"
+            }).html("Select None").bind("click", function() {
+              return valueList.find(".pvtCheckContainer input:visible").prop("checked", false);
+            }));
+            btns.append($("<br>"));
+            btns.append($("<input>", {
+              type: "text",
+              placeholder: "Filter",
+              "class": "pvtSearch"
+            }).bind("keyup", function() {
+              var filter;
+              filter = $(this).val().toLowerCase();
+              return valueList.find('.pvtCheckContainer p').each(function() {
+                var testString;
+                testString = $(this).text().toLowerCase().indexOf(filter);
+                if (testString !== -1) {
+                  return $(this).show();
+                } else {
+                  return $(this).hide();
+                }
+              });
+            }));
+            checkContainer = $("<div>").addClass("pvtCheckContainer").appendTo(valueList);
+           // ref2 = keys.sort(getSort(opts.sorters, c));
+            for (o = 0, len3 = consolidated.length; o < len3; o++) {
+              //k = ref2[o];
+              //v = axisValues[c][k];
+              k = consolidated[o];
+              v = consolidatedc[consolidated[o]];
+              filterItem = $("<label>");
+              filterItemExcluded = false;
+             
+         slk_exc_tick = true;
+         if (exclusions.hasOwnProperty(c)==true) 
+         {
+          if (exclusions[c].find( function (a) { return a==k; }) != null) { slk_exc_tick = false }; 
+         }
+         $("<input>").attr("type", "checkbox").addClass('pvtFilter').attr("checked", slk_exc_tick).data("filter", [c, k]).appendTo(filterItem);
+              filterItem.append($("<span>").html(k));
+              filterItem.append($("<span>").text(" (" + v + ")"));
+              checkContainer.append($("<p>").append(filterItem));
+            }
+          
+            updateFilterMap = function() {
+        var unselectedCount;
+            unselectedCount = valueList.find("[type='checkbox'].pvtFilter").length  - valueList.find("[type='checkbox'].pvtFilter:checked").length;
+            if (unselectedCount > 0) {
+              attrElem.addClass("pvtFilteredAttribute");
+            } else {
+              attrElem.removeClass("pvtFilteredAttribute");
+            }
+          exclusions = collect_mapfilters(); 
+          
+        //  slickupdate(dataView,grid,checklist,false,true); 
+        grid={};
+         map_full_config.report_type =     $( "#report_type option:selected" ).text();
+         map_full_config.fields = checklist;
+         map_full_config.exclusions = exclusions;
+         map_full_config.map = true;
+           map_full_config.groupby =  $( "#groupby option:selected" ).text();
+                   $("#config_json").val(JSON.stringify(map_full_config, undefined, 2));
+          return valueList.toggle(0,refresh_map);
+         //     return valueList.toggle(0, slickupdate(dataView, grid, checklist,false,true));
+          }; //UpdateFilterMap
+          $("<p>").appendTo(valueList).append($("<button>", {
+            type: "button"
+          }).text("OK").bind("click", updateFilterMap));
+          showFilterList = function(e) {
+            var clickLeft, clickTop, ref3;
+            ref3 = $(e.currentTarget).position(), clickLeft = ref3.left, clickTop = ref3.top;
+            valueList.css({
+              left: clickLeft + 10,
+              top: clickTop + 10
+            }).toggle();
+            valueList.find('.pvtSearch').val('');
+            return valueList.find('.pvtCheckContainer p').show();
+          };
+          triangleLink = $("<span>").addClass('pvtTriangle').html(" &#x25BE;").bind("click", showFilterList);
+          i = 1;
+          attrElem = $("<li>").attr('id',c).addClass("axis_" + i).append($("<span>").addClass('pvtAttr').text(c).data("attrName", c).append(triangleLink));
+          if (hasExcludedItem) {
+            attrElem.addClass('pvtFilteredAttribute');
+          }
+          
+           report_output_divs.append(attrElem).append(valueList);
+  //        $("#reportoutput").append(attrElem.prop('outerHTML')).append(valueList.prop('outerHTML'))
+    //      return attrElem.bind("dblclick", showFilterList);
+          return attrElem.bind("dblclick", showFilterList);
+    };
+  
+        //// ENd of fnmap
+        
+        
+var searchIDs = $('#fieldtable input:checked').map(function(){ return $(this).val(); });
+    var searchIDs2 = $('#fieldtable input:checked').map(function(){ return $(this).attr("name");});
+ var checklist = searchIDs.get();
+    var checklist2 = searchIDs2.get();
+     var report_type = $( "#report_type option:selected" ).text();
+    if (report_type=='Members & Sections') {
+                checklist.push("MC|Core|othersections");
+                checklist2.push("Other Sections");
+    }
+//ga('send', 'event', 'Report', security.userid, $("#report_type option:selected" ).text());
+Slick.Data.GroupItemMetadataProvider();
+   
+    dataView = new Slick.Data.DataView( ); 
+    var Refresh = function(config) {  var config_copy = JSON.parse(JSON.stringify(config));
+                    //delete some values which are functions
+                      delete config_copy["aggregators"];
+                      delete config_copy["renderers"];
+                      if ($("#saveas_filters").val()!="on") {
+                    //    delete config_copy["exclusions"];
+                      }
+                      delete config_copy["sorters"];                                    
+                      delete config_copy["derivedAttributes"];
+                    //delete some bulky default values
+                     // delete config_copy["rendererOptions"];
+                      delete config_copy["localeStrings"];
+   $("#SavedReports").val("blank");
+   disp($("input[name='display_total']:checked").val()=="on");
+   var searchIDs = $('#fieldtable input:checked').map(function(){    
+      return $(this).val();
+    });
+    var checklist = searchIDs.get();
+      
+        var full_config = new Object();
+            full_config.pivot = config_copy;
+            full_config.report_type =     $( "#report_type option:selected" ).text();
+            full_config.rotate = [];
+            $("#reportoutput").find('input.pvtrotate:checked').each(function() {
+            full_config.rotate.push($(this).data("rotate")); 
+            });
+            full_config.fields = checklist;
+            // full_config.display_total = ($("#dialog-form3 input[name='display_total']:checked").val()=="on");
+                    // $("#config_json").val(JSON.stringify(config_copy, undefined, 2));
+            $("#config_json").val(JSON.stringify(full_config, undefined, 2));
+ };
+    
+		var sortAs =           $.pivotUtilities.sortAs;
+        var naturalSort2 =           $.pivotUtilities.naturalSort2;
+        var renderers = $.extend($.pivotUtilities.renderers, $.pivotUtilities.export_renderers,
+                        $.pivotUtilities.gchart_renderers, $.pivotUtilities.pdf_renderers,$.pivotUtilities.excel_renderers);
+        var agg = "Count";
+        var rows = new Array();
+        var cols = new Array();
+        var vals = new Array();
+        var rendname = "Table";
+        var rotate = new Array();
+        var exclusions = new Object;
+        var inclusions = new Object;
+        var refresh_layout = false;
+        if($("#SavedReports option:selected").text() != "") {
+        if ($("#SavedReports option:selected").hasClass("template")) {
+        for(var i = 0; i < template_report.reports.length;  i++) {
+           if (template_report.reports[i].name==$("#SavedReports option:selected").text()) {
+             var saved_report = JSON.parse(template_report.reports[i].def);
+           }
+         }  
+       } else {
+         for (var report in report_list.reports) {
+        if (report_list.reports[report].name==$("#SavedReports option:selected").text()) {
+        var saved_report = JSON.parse(report_list.reports[report].def);
+         }
+        }
+        }
+        //var saved_report = JSON.parse(GM_getValue($("#SavedReports option:selected").text()));
+        $("#SavedReports").val("blank");
+         if (saved_report.hasOwnProperty("pivot")) {
+         rows = saved_report.pivot.rows;
+         rendname = saved_report.pivot.rendererName;
+         if(typeof saved_report.pivot.exclusions  === "undefined") {
+         } else {  
+exclusions = saved_report.pivot.exclusions;
+inclusions = saved_report.pivot.inclusions;
+}
+         cols = saved_report.pivot.cols;
+         vals = saved_report.pivot.vals;
+         rotate = saved_report.rotate;
+         disp(saved_report.display_total);
+                $("#dialog-form3 input[name='display_total']").prop('checked',saved_report.display_total); 
+            
+         refresh_layout = true;
+         agg = saved_report.pivot.aggregatorName;
+        } else if ( saved_report.hasOwnProperty("map"))
+        {
+            map_full_config = saved_report;
+        }
+        
+        else {slick_full_config = saved_report; }
+        	
+        }
+		var pvtOpts = {
+			renderers: renderers,
+            onRefresh: Refresh,
+            rendererName : rendname,
+            rows: rows,
+            cols: cols,
+            vals: vals,
+            exclusions: exclusions,
+            inclusions: inclusions,
+            rotate : rotate,
+            sorters: function(attr) {
+                        if(attr == "Month of Birth") {
+                            return sortAs(["Jan","Feb","Mar","Apr", "May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]);
+                        }
+                        if((attr == "Patrol Role")|(attr == "Role ID")) {
+                            return naturalSort2();
+                        }
+            },
+			aggregatorName : agg
+		};
+
+ 
+//debugger;
+   
+var display_option 
+display_option = $('input[name=outputtype]:checked').val();
+display_option = $('input[type=radio][name=render]:checked').val();
+    if (display_option=='pivot') {
+          if ($("#mapid").is(":visible")) { $("#mapid").toggle();} 
+        $("#reportoutput").pivotUI(report_data, pvtOpts,refresh_layout);
+        $("#reportoutput").append("<br>Drag fields from the blue 'dock' area to the pink columns and rows areas.");
+        
+    }  else if (display_option=='map') {
+         checklist = Array.from(new Set(checklist));
+         checklist2 = Array.from(new Set(checklist2));
+          for (l in report_data[0]){ 
+             if ((l.indexOf("Postcode")==-1) && (l.indexOf("Full Name")==-1)&& (l.indexOf("id")==-1)) {prop2=l;}
+         }
+         if (!map_full_config.hasOwnProperty("groupby")){ map_full_config.groupby=prop2}
+         report_output_divs2 = "<div class='oneline' style='display: flex'><div class='reportfields' style='width:auto'>Group by:<br><select id='groupby'>";
+         for ( field in checklist ) {
+             report_output_divs2 +="<option";
+             if ((map_full_config.hasOwnProperty("groupby")) & (map_full_config.groupby==checklist2[field])) {report_output_divs2 +=" selected";} 
+             report_output_divs2 += ">"+checklist2[field]+"</option>"
+         }
+         report_output_divs2 +="</select></div><div class='filtersline'></div>";
+         report_output_divs = $("<ul>").addClass("reportfields").attr("id", "listfields");
+ // keys = Object.keys(report_data[0]);
+  for ( field in checklist ) { 
+ //     if (columnsizes.hasOwnProperty(checklist2[field])==false) 
+ //     {
+ //         columnsizes[checklist2[field]] = 100;
+ //     };
+      // Assemble Unique Values & Counts
+       var consolidated, consolidatedc 
+             
+   
        
       consolidated = []
       consolidatedc = []
@@ -3590,10 +4440,165 @@ display_option = $('input[type=radio][name=render]:checked').val();
              
           }
       consolidated.sort();
-     var test_output =  fndd(checklist2[field]);
+     var test_output =  fnddmap(checklist2[field]);
+   
+   
+  }   //fields
+        
+           $("#reportoutput").html("");  
+           $("#reportoutput").append(report_output_divs2); 
+    //       $("#reportoutput").append("<div>");
+     //      $("#reportoutput").append(report_output_divs);  
+             $(".filtersline").append(report_output_divs);  
+           $("#reportoutput").append("</div></div><div class='mapkey'></div>"); 
+      //     $("#reportoutput").append("<br>Mapping is not yet implemented");
+            $("#groupby").on("change",refresh_map);
+            if (!$("#mapid").is(":visible")) { $("#mapid").toggle();} 
+           if (!mymap.hasOwnProperty('options')) {
+             
+              mymap = L.map('mapid',{     
+                      fullscreenControl: true,
+                      fullscreenControlOptions: {position: 'topleft'}}).setView([51.505, -0.09], 13);
+           }
+           mymap.eachLayer(function (layer) {
+             mymap.removeLayer(layer);
+           });
+           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        maxZoom: 18,
+        id: 'mapbox/streets-v11',
+        tileSize: 512,
+        zoomOffset: -1,
+    }).addTo(mymap)
+     iconSettings = {
+        mapIconUrl: '<svg version="1" xmlns="http://www.w3.org/2000/svg" style="width: 30px; height: 40px;" ><path fill="{mapIconColor}" stroke="#FFF" stroke-width="1" stroke-miterlimit="10" d="m14.095833,1.55c-6.846875,0 -12.545833,5.691 -12.545833,11.866c0,2.778 1.629167,6.308 2.80625,8.746l9.69375,17.872l9.647916,-17.872c1.177083,-2.438 2.852083,-5.791 2.852083,-8.746c0,-6.175 -5.607291,-11.866 -12.454166,-11.866zm0,7.155c2.691667,0.017 4.873958,2.122 4.873958,4.71s-2.182292,4.663 -4.873958,4.679c-2.691667,-0.017 -4.873958,-2.09 -4.873958,-4.679c0,-2.588 2.182292,-4.693 4.873958,-4.71z"/></svg>',
+       
+        mapIconColor: '#cc756b',
+        mapIconColorInnerCircle: '#fff',
+        pinInnerCircleRadius: 0
+    };
+    
+divIcon = L.divIcon({
+                        className: "leaflet-data-marker",
+                        html: L.Util.template(iconSettings.mapIconUrl, iconSettings),
+                        iconAnchor: [12, 32],
+                        iconSize: [25, 40],
+                        popupAnchor: [0, -28] 
+                         
+                    });
+    current_geojson = L.geoJSON(null, {onEachFeature: onEachFeature,  
+                                     filter: function(feature, layer) {
+                                            exclude = false;
+                                         for(field in exclusions) {
+                                            for (exv=0;exv<exclusions[field].length;exv++){
+                                                if (feature.properties.filtervalue[field]==exclusions[field][exv]) { exclude = true; }
+                                            }
+                                         }
+                                            return (!exclude);
+                                        }, 
+                                    pointToLayer: function (feature, latlng) {
+                                         
+        iconSettings.mapIconColor =  feature.properties.iconcolor;
+		divIcon = L.divIcon({
+                        className: "leaflet-data-marker",
+                        html: L.Util.template(iconSettings.mapIconUrl, iconSettings),
+                        iconAnchor: [12, 32],
+                        iconSize: [25, 40],
+                        popupAnchor: [0, -28] 
+                         
+                    });
+				return  L.marker(latlng,{icon: divIcon}) 
+            
+    }}); //.addTo(mymap);
+    prop = "";
+    prop2 = "";
+    for (l in report_data[0]){ 
+        if (l.indexOf("Postcode")>-1) {prop=l;}
+        if ((l.indexOf("Postcode")==-1) && (l.indexOf("Full Name")==-1)&& (l.indexOf("id")==-1)) {prop2=l;}
+    }
+    if ((map_full_config.hasOwnProperty("groupby"))) {prop2= map_full_config.groupby};
+    var unique = [...new Set(report_data.map(item => item[prop2]))];
+    unique.sort();
+    exclusions = collect_mapfilters(); 
+    update_map_key(unique,prop2,exclusions)
+     markers  = L.markerClusterGroup();    
+    gf = [];
+    for(var i=0;i<report_data.length;i++){
+         iconSettings.mapIconColor = osm_colours[unique.findIndex(a=>a==report_data[i][prop2])%osm_colours.length];
+         pc = report_data[i][prop];
+         if (report_data[i].hasOwnProperty("Full Name")) {fn = report_data[i]["Full Name"] } else {fn =pc}
+         ll = postcode_list.find(a=>(a.query==pc));
+         if (ll!=undefined&&ll.result!=null) {
+            var geojsonFeature = {
+            "type": "Feature",
+            "properties": {
+            "popupContent": fn+"<br>"+report_data[i][prop2],
+            "filtervalue": report_data[i],
+            "iconcolor":osm_colours[unique.findIndex(a=>a==report_data[i][prop2])%osm_colours.length]
+            },
+            "geometry": {
+            "type": "Point",
+            "coordinates": [ll.result.longitude,ll.result.latitude]
+            }
+            };   
+          //   current_geojson.addData(geojsonFeature);
+          gf.push(geojsonFeature);
+        }
+        
+       
+       
+    }
+      current_geojson.addData(gf);
+       markers.addLayer(current_geojson);
+  mymap.addLayer(markers);
+ // mymap.removeLayer(current_geojson); 
+    //   markers.addLayer(current_geojson);
+    //  mymap.addLayer(markers);
+    //  mymap.removeLayer(current_geojson);
+     if (markers.getBounds().hasOwnProperty("_northEast")){
+  mymap.fitBounds(markers.getBounds());
+  map_full_config.report_type =     $( "#report_type option:selected" ).text();
+         map_full_config.fields = checklist;
+         map_full_config.exclusions = exclusions;
+         map_full_config.map = true;
+         map_full_config.groupby =  $( "#groupby option:selected" ).text();
+     }
+    } // map
+    else {
+ 
+         if ($("#mapid").is(":visible")) { $("#mapid").toggle();} 
+        var report_output_divs, triangleLink, field_div, btn, field
+    //    if (1==1) {
+ report_output_divs = $("<ul>").addClass("reportfields").attr("id", "listfields");
+ // keys = Object.keys(report_data[0]);
+  for ( field in checklist ) { 
+      if (columnsizes.hasOwnProperty(checklist2[field])==false) 
+      {
+          columnsizes[checklist2[field]] = 100;
+      };
+      // Assemble Unique Values & Counts
+       var consolidated, consolidatedc 
+             
+   
+       
+      consolidated = []
+      consolidatedc = []
+          for (var value in report_data) {
+              if (consolidated.indexOf(report_data[value][checklist2[field]]) < 0 ) {
+                   consolidated.push(report_data[value][checklist2[field]]) ;
+                   consolidatedc[report_data[value][checklist2[field]]] = 1;
+              } else
+              {
+                   consolidatedc[report_data[value][checklist2[field]]] += 1;
+              }
+             
+          }
+      consolidated.sort();
+     var test_output =  fndd(checklist2[field],"sg");
    
    
   }  
+  
   var sortlist = $("<ul>").attr("id","fieldsortlist");   
   var sortlistinc = new Array ();
   sortlistinc = [];    
@@ -3627,6 +4632,7 @@ display_option = $('input[type=radio][name=render]:checked').val();
   //report_output_divs = report_output_divs+  "</ul><br><ul id=\"selfields\" class=\"reportfields\" style=\"list-style-type: none; margin: 0; float: left; margin: 10px; background: #eee;  width: 95% ; padding: 5px; border-style: solid!important; \"></ul><div id=\"reportoutput2\" style=\" min-height: 300px; height: 95%; width: 95%; margin: 30px;border-style: solid!important;\"></div>"
   
   $('#reportoutput').html(""); 
+ // $('#reportoutput').append("Drag fields from the blue dock area to the pink area. Sort sequence fields can also be dragged.<br>"); 
   $('#reportoutput').append('<table id="reportoutputtable"></table>');
   $('#reportoutput').children().append("<tr><td rowspan=3 id=\"tablesortlist\" width=\"20%\"></td><td id=\"tablereportoutput\"></td></tr><tr><td id=\"tablereportoutput2\"></td></tr><td id=\"tablereportoutput3\"></td></tr>");
   $("#tablereportoutput").html(report_output_divs);  
@@ -3634,7 +4640,7 @@ display_option = $('input[type=radio][name=render]:checked').val();
   $("#tablereportoutput3").append($("<div>").attr('id', 'reportoutput2'));
   $("#tablereportoutput3").css('max-width', (0.8*$("#reportoutput").width())+"px");
   $("#tablesortlist").html(sortlist);
-  $("#tablesortlist").prepend("Output: <select class=\"slickot\" ><option value=\"grid\">Grid</option><option value=\"pdf\">PDF</option><option value=\"pdfd\">PDF Download</option></select><br><button id=\"expall\" type=\"button\">Expand All</button><button id=\"collall\" type=\"button\">Collapse All</button><br><b>Sort Sequence</b>");
+  $("#tablesortlist").prepend("Output: <select class=\"slickot\" ><option value=\"grid\">Grid</option><option value=\"pdf\">PDF</option><option value=\"pdfd\">PDF Download</option></select><br><button id=\"expall\" type=\"button\">Expand All</button><button id=\"collall\" type=\"button\">Collapse All</button><br><br><small>Drag fields from the blue dock area to the pink area. The fields below can also be dragged to change the sort sequence.</small><br><br><b>Sort Sequence</b>");
   if(slick_full_config.hasOwnProperty("output_type")) {
      $(".slickot").val(slick_full_config.output_type);
   }
@@ -3884,12 +4890,35 @@ function getAge(dateString,dateString2, ageformat) {
     ageString = age.months + monthString + " old.";
   else ageString = "Oops! Could not calculate age!";
     }
+    if (ageformat=="b") {
+  if ( (age.years > 0) && (age.months > 0) && (age.days > 0) )
+    ageString = age.years + yearString + ", " + age.months + monthString + ", and " + age.days + dayString + ".";
+  else if ( (age.years == 0) && (age.months == 0) && (age.days > 0) )
+    ageString = "Only " + age.days + dayString + ".";
+  else if ( (age.years > 0) && (age.months == 0) && (age.days == 0) )
+    ageString = age.years + yearString + " old. Happy Birthday!!";
+  else if ( (age.years > 0) && (age.months > 0) && (age.days == 0) )
+    ageString = age.years + yearString + " and " + age.months + monthString + ".";
+  else if ( (age.years == 0) && (age.months > 0) && (age.days > 0) )
+    ageString = age.months + monthString + " and " + age.days + dayString + ".";
+  else if ( (age.years > 0) && (age.months == 0) && (age.days > 0) )
+    ageString = age.years + yearString + " and " + age.days + dayString + ".";
+  else if ( (age.years == 0) && (age.months > 0) && (age.days == 0) )
+    ageString = age.months + monthString + ".";
+  else ageString = "Oops! Could not calculate age!";
+    }
+    
     if (ageformat=="y") {
         ageString = age.years;
     }
 if (ageformat=="s") {
         ageString = age.years + "/" + age.months;
     }
+if (ageformat=="c") {    
+ 
+ 
+ageString  = Math.ceil(Math.abs(now - dob) / (1000 * 60 * 60 * 24)); 
+}
   return ageString;
 }
 
@@ -3897,7 +4926,7 @@ function print_report() {
     var display_option = $('input[name=outputtype]:checked').val();
     var mywindow = window.open();
      if (display_option=='pivot') {
- 
+    
      mywindow.document.write('<html><head><title>my div</title><style>');
     mywindow.document.write('table, th, td { border: 1px solid black; border-collapse: collapse; font-family: Verdana,Arial,sans-serif; font-size: 8pt;} .pvtAxisLabel { background: grey;}');
                             if($("#dialog-form3 input[name='display_total']:checked").val()==false) {
@@ -4064,11 +5093,19 @@ if (type==1) {
 $("#pivot_menu_entry").html("&#10004; Pivot Layout");
 $("#pivottable").prop("checked", true);
 $("#grid_menu_entry").html("Grid Layout");
-} else
-{
+$("#map_menu_entry").html("Map Layout");
+} 
+if (type==2) {
 $("#pivot_menu_entry").html("Pivot Layout");
+$("#map_menu_entry").html("Map Layout");
 $("#grid_menu_entry").html("&#10004; Grid Layout");
 $("#gridtable").prop("checked", true);
+}
+if (type==3) {
+$("#pivot_menu_entry").html("Pivot Layout");
+$("#grid_menu_entry").html("Grid Layout");
+$("#map_menu_entry").html("&#10004; Map Layout");
+$("#maptable").prop("checked", true);
 }
 select_checks2();
 }
@@ -4096,10 +5133,12 @@ select_checks2();
 <a href="#" style="color: #F37A1F;border: #f1f1f1;border-top-style: solid;">Format Options</a>
 <a href="#"><span id="pivot_menu_entry" onclick="select_type(1)">&#10004; Pivot Layout</span></a>
 <a href="#"><span id="grid_menu_entry" onclick="select_type(2)">Grid Layout</span></a>
+<a href="#" ><span id="map_menu_entry" onclick="select_type(3)" >Map Layout</span></a>
 <a href="#" style="border: #f1f1f1;border-bottom-style: solid;"><span id="total_menu_entry" onclick="select_totals()" >Display Totals</span></a>
   <a href="#"><span  onclick="pdf_dialog_open()">PDF Options</span></a>
 <a href="#"><span onclick="menu_closeNav();xls_dialog_open();">Save Data to Excel</span></a>
- <a href="#"><span onclick="api_settings_table()">Check OSM</span></a>
+ <!-- <a href="#"><span onclick="api_settings_table()">Check OSM</span></a> 
+ -->
  <a href="#"><span onclick="$('#lib-thanks').dialog({ position: {'my': 'center',  at: 'center top+200', of: window } });$('#osmr_version').text(osmr_version);$('#relay_path_setting').val(relay_path); lib_thanks.dialog('open');">About</span></a>
  <a href="#"><span onclick="var win = window.open('https://2ndnewhawscouts.org.uk/wordpress-plugins-for-scout-websites/osmr-reporting-for-osm/#donate', '_blank');
   win.focus();">Donate</span></a>
@@ -4131,6 +5170,7 @@ Exclude Access Report<input type="checkbox" id="logon_access" name="logon_access
 
 <!--<label class="gridtype pivottable" for="pivottable"> <span class="tooltiptext">Pivot Table</span></label> -->
   <input id="gridtable" type="radio" name="render" value="grid"><!--<label class="gridtype gridtable" for="gridtable"> <span class="tooltiptext">Grid Table</span></label>-->
+<input id="maptable" type="radio" name="render" value="map">
 </div><input type="checkbox"  id="disp_totals_ck" name="display_total"><!--<label for="disp_totals_ck" id="disp_totals_ck"><span class="tooltiptext">Display Totals</span></label>-->
 
 <!--<button id="pdf_button" type="button" onclick="pdf_dialog_open()"> <span class="tooltiptext">PDF Options</span></button>-->
@@ -4146,6 +5186,9 @@ Exclude Access Report<input type="checkbox" id="logon_access" name="logon_access
 </div>
     
 <div id = "reportoutput">
+</div>
+<div style="display:none; height: 500px;" id="mapid">
+    
 </div>
 
 <div id = "reportoutput_about">
@@ -4260,9 +5303,9 @@ Delete: function () {delr_dialog.dialog( "close" );delete_report();}
 }});
  access= $('#logon_access').is(":checked");
 if (!access) {
-var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","User Access","Programme & Badges","Programme & Attendance"];
+var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Members & WL","Members & Maps", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","User Access","Programme & Badges","Programme & Attendance"];
 } else {
-   var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","Programme & Attendance"]; 
+   var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Members & WL","Members & Maps","Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","Programme & Badges","Programme & Attendance"]; 
 }
 for (dodrop in dialog_array)
 {
