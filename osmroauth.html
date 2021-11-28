@@ -539,6 +539,7 @@ else
         } else
         {
           pdf_table_cell.text = c;
+          pdf_replace(pdf_table_cell);
       //    pdf_table_cell.font = "Icon";
       //    pdf_table_cell.fontSize = 25;
         }
@@ -577,6 +578,7 @@ else
             } else
              {
             pdf_table_cell.text = colKey[j].toString(); 
+            pdf_replace(pdf_table_cell);
              };
     //       
             pdf_table_cell.colSpan = x;
@@ -621,6 +623,7 @@ else
           r = rowAttrs[i];
           var pdf_table_cell = new Object;  
           pdf_table_cell.text = r.toString(); 
+          pdf_replace(pdf_table_cell);
           table_row.push(pdf_table_cell) 
           //th = document.createElement("th");
           //th.className = "pvtAxisLabel";
@@ -665,6 +668,7 @@ else
 //            th.className = "pvtRowLabel";
 //            th.innerHTML = txt;
             pdf_table_cell.text = txt;
+            pdf_replace(pdf_table_cell);
             pdf_table_cell.rowSpan = x;  
             // th.setAttribute("rowspan", x);
             if (parseInt(j) === rowAttrs.length - 1 && colAttrs.length !== 0) {
@@ -692,10 +696,17 @@ else
           //td.innerHTML = aggregator.format(val);
           pdf_table_cell.text  = aggregator.format(val);
           //td.setAttribute("data-value", val);
-          //tr.appendChild(td);
-          if (pdf_table_cell.text =="&#10060;") { pdf_table_cell.text = "h"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'red'; }
-              if (pdf_table_cell.text =="&#9989;") { pdf_table_cell.text = "e"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green'; }
-                  if (pdf_table_cell.text =="&#10062;") { pdf_table_cell.text = "f"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green';}
+          //tr.appendChild(td); 
+       //   if (pdf_table_cell.text =="&#10060;") { pdf_table_cell.text = "h"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'red'; }
+       //       if (pdf_table_cell.text =="&#9989;") { pdf_table_cell.text = "e"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green'; }
+    //              if (pdf_table_cell.text =="&#10062;") { pdf_table_cell.text = "f"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green';}
+      //             if (pdf_table_cell.text =="&#8413;") { pdf_table_cell.text = "A"; pdf_table_cell.font = "pie";pdf_table_cell.color = 'black';}
+        //           if (pdf_table_cell.text =="&#9684;") { pdf_table_cell.text = "F"; pdf_table_cell.font = "pie";pdf_table_cell.color = 'black';}
+          //         if (pdf_table_cell.text =="&#9719;") { pdf_table_cell.text = "B"; pdf_table_cell.font = "pie";pdf_table_cell.color = 'black';}
+            //       if (pdf_table_cell.text =="&#9681;") { pdf_table_cell.text = "K"; pdf_table_cell.font = "pie";pdf_table_cell.color = 'black';}
+              //     if (pdf_table_cell.text =="&#9685;") { pdf_table_cell.text = "P"; pdf_table_cell.font = "pie";pdf_table_cell.color = 'black';}
+                //   if (pdf_table_cell.text =="&#11044;") { pdf_table_cell.text = "U"; pdf_table_cell.font = "pie";pdf_table_cell.color = 'black';}
+           pdf_replace(pdf_table_cell);
            table_row.push(pdf_table_cell)    
         }
           if (($("#disp_totals_ck").prop("checked"))) {          
@@ -802,6 +813,18 @@ pdf_doc_copy = $.extend(true, {}, pdf_doc);
                         italics: 'fontello.ttf',
                         bolditalics: 'fontello.ttf'
                         },
+                     Harvey: {
+                        normal: 'Harvey.ttf',
+                        bold: 'Harvey.ttf',
+                        italics: 'Harvey.ttf',
+                        bolditalics: 'Harvey.ttf'
+                        },
+                    pie: {
+                        normal: 'pie.ttf',
+                        bold: 'pie.ttf',
+                        italics: 'pie.ttf',
+                        bolditalics: 'pie.ttf'
+                        },
                     nunito: {
                         normal: 'Nunito-Sans.ttf',
                         bold: 'Nunito-Sans-Bold.ttf',
@@ -824,6 +847,18 @@ pdf_doc_copy = $.extend(true, {}, pdf_doc);
                         bold: 'fontello.ttf',
                         italics: 'fontello.ttf',
                         bolditalics: 'fontello.ttf'
+                        },
+                        Harvey: {
+                        normal: 'Harvey.ttf',
+                        bold: 'Harvey.ttf',
+                        italics: 'Harvey.ttf',
+                        bolditalics: 'Harvey.ttf'
+                        },
+                     pie: {
+                        normal: 'pie.ttf',
+                        bold: 'pie.ttf',
+                        italics: 'pie.ttf',
+                        bolditalics: 'pie.ttf'
                         },
                     nunito: {
                         normal: 'Nunito-Sans.ttf',
@@ -850,6 +885,21 @@ pdf_doc_copy = $.extend(true, {}, pdf_doc);
 
 //# sourceMappingURL=gchart_renderers.js.map
 ///////
+
+function pdf_replace(pdf_table_cell) {
+     if (pdf_table_cell.text =="&#10060;") { pdf_table_cell.text = "h"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'red'; }
+              if (pdf_table_cell.text =="&#9989;") { pdf_table_cell.text = "e"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green'; }
+                  if (pdf_table_cell.text =="&#10062;") { pdf_table_cell.text = "f"; pdf_table_cell.font = "fontello";pdf_table_cell.color = 'green';}
+                   if (pdf_table_cell.text =="&#8413;") { pdf_table_cell.text = "A"; pdf_table_cell.font = "pie";pdf_table_cell.color = '#FF0D0D';}
+                   if (pdf_table_cell.text =="&#9684;") { pdf_table_cell.text = "F"; pdf_table_cell.font = "pie";pdf_table_cell.color = '#FF8E15';}
+                   if (pdf_table_cell.text =="&#9719;") { pdf_table_cell.text = "B"; pdf_table_cell.font = "pie";pdf_table_cell.color = '#FF4E11';}
+                   if (pdf_table_cell.text =="&#9681;") { pdf_table_cell.text = "K"; pdf_table_cell.font = "pie";pdf_table_cell.color = '#FAB733';}
+                   if (pdf_table_cell.text =="&#9685;") { pdf_table_cell.text = "P"; pdf_table_cell.font = "pie";pdf_table_cell.color = '#ACB334';}
+                   if (pdf_table_cell.text =="&#11044;") { pdf_table_cell.text = "U"; pdf_table_cell.font = "pie";pdf_table_cell.color = '#69B34C';}
+                   return pdf_table_cell;
+}
+
+
 function slick_pdf() {
  var groupings  = dataView.getGrouping();
      var table_row = new Array; 
@@ -1003,6 +1053,10 @@ var request = $.ajax({
   dataType: "json"
 });
 request.done(function( msg ,status,req) {
+    	if (req.getResponseHeader("x-blocked")!=null){
+			alert("");
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd+" "+get_data_array[c].field);
+			}
   $("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
    var d = new Date();
   var n = d.getTime();
@@ -1044,6 +1098,10 @@ $.ajax({
     
 			data: $.param(obj),
 			success: function(data,status,req){$("#rr").text(req.getResponseHeader("x-ratelimit-remaining"));$("#rt").text(req.getResponseHeader("x-ratelimit-reset"));
+			if (req.getResponseHeader("x-blocked")!=null){
+			alert("");
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd+" "+get_data_array[c].field);
+			}
 			  var d = new Date();
   var n = d.getTime();
    n = n + req.getResponseHeader("x-ratelimit-reset")*1000;
@@ -1459,7 +1517,7 @@ function select_fields () {
             get_data_array.push(get_data_line);
         }
 
-        if ((report_type == "Members")|(report_type =="Programme & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges")|(report_type=="Events & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
+        if ((report_type == "Members")|(report_type =="Programme & Attendance")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges")|(report_type=="Events & Attendance")|(report_type == "Members & Staged Badges")|(report_type == "Members & Badges Details")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
             var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/settings/patrols/?action=get&sectionid='+section;
             report_config[section].patrol = "";
@@ -1490,10 +1548,13 @@ function select_fields () {
         //ext/members/flexirecords/?action=getFlexiRecords&sectionid='.$ss_value.'&archived=n
         // alert(section + " " + report_config[section].termid);
         }
-        if ((report_type == "Members & Badges")|(report_type == "Badges")|(report_type == "Members & Badges Details")|(report_type == "Members & Challenge Badges")) {
+        if ((report_type == "Members & Badges")|(report_type == "Badges")|(report_type == "Members & Badges Details")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Staged Badges")) {
             maxbadges = 5; badge_start=1;
             if (report_type == "Members & Challenge Badges") {
               maxbadges = 2; badge_start=1;    
+            }
+             if (report_type == "Members & Staged Badges") {
+              maxbadges = 4; badge_start=3;    
             }
             for(var i = badge_start; i < maxbadges;  i++) {
 //for(var i = 1; i < 2;  i++) {
@@ -1507,7 +1568,7 @@ function select_fields () {
             get_data_line.field = "badges|"+i;
             get_data_array.push(get_data_line);
             } 
-            if ((report_type == "Members & Badges")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")) {
+            if ((report_type == "Members & Badges")|(report_type == "Members & Challenge Badges")|(report_type == "Members & Badges Details")|(report_type == "Members & Staged Badges")) {
             var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/badges/badgesbyperson/?action=loadBadgesByMember&section='+section_config[section].section_type+'&sectionid='+section+'&term_id='+report_config[section].termid;
             get_data_line.data = report_config[section];
@@ -1585,7 +1646,7 @@ function assemble_data() {
      $( ".progress-label" ).text('Round 2');
      var report_type = $( "#report_type option:selected" ).text();
     for(var section in report_config) {
-        if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Events & Attendance")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
+        if ((report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Events & Attendance")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")|(report_type == "Members & Staged Badges")) {
         var members_array = JSON.parse(report_config[section].members);
         var mc = false;
         report_config[section].member_sections = new Array();
@@ -1728,14 +1789,14 @@ function assemble_data() {
         }   
     }
 
-   if ((report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")) {
+   if ((report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")|(report_type == "Members & Staged Badges")) {
       report_config[section].badgereq = new Array();
        report_config[section].badgewiz = new Array();
       for(var section in report_config) {
         for(var bt in report_config[section].badges) {
           var bl = (report_config[section].badges[bt]); 
           for(var bd in bl.details) {
-
+       //     if (((report_type == "Members & Staged Badges")&((bd.badge_id=='94')||(bd.badge_id=='95')))||(report_type != "Members & Staged Badges")) {
             var get_data_line = new Object();
             get_data_line.url = 'https://www.onlinescoutmanager.co.uk/ext/badges/records/?action=getBadgeRecords&term_id='+report_config[section].termid+'&section='+section_config[section].section_type+"&badge_id="+bl.details[bd].badge_id+"&section_id="+section+"&badge_version="+bl.details[bd].badge_version;
             get_data_line.data = report_config[section];
@@ -1755,7 +1816,7 @@ function assemble_data() {
             get_data_line.field = "badgewiz|"+bl.details[bd].badge_identifier;
             get_data_array.push(get_data_line);
 
-
+         //   }
 
 
           }
@@ -1851,9 +1912,16 @@ function assemble_data2() {
      
     var bm_field_list = [
         { "fieldname" : "BM|Badge|awarded", "fieldlabel" : "Badge Awarded" },
+        { "fieldname" : "BM|Badge|awardeddet", "fieldlabel" : "Badge Awarded Detail" },
         { "fieldname" : "BM|Badge|awarded_date", "fieldlabel" : "Date Awarded" },
         { "fieldname" : "BM|Badge|status", "fieldlabel" : "% Complete" },
-        { "fieldname" : "BM|Badge|completed", "fieldlabel" : "Completed" }
+        { "fieldname" : "BM|Badge|statussym", "fieldlabel" : "Symbol % Complete" },
+        { "fieldname" : "BM|Badge|completed", "fieldlabel" : "Completed" },
+        { "fieldname" : "BM|Badge|due", "fieldlabel" : "Due" },
+        { "fieldname" : "BM|Badge|dorc", "fieldlabel" : "Due or Completed" },
+        { "fieldname" : "BM|Badge|yearcompleted", "fieldlabel" : "Year Awarded" },
+         { "fieldname" : "BM|Badge|datedueaward", "fieldlabel" : "Date Awarded/Due" },
+          { "fieldname" : "BM|Badge|yeardueaward", "fieldlabel" : "Year Awarded/Due" },
         ];
     var bm_field_detail_list = [
         { "fieldname" : "BD|Badge|name", "fieldlabel" : "Short Requirement" },
@@ -1980,7 +2048,7 @@ function assemble_data2() {
     var report_type = $( "#report_type option:selected" ).text();
     $("#fieldlist").empty();
     $("#fieldlist").show();
-     if ((report_type=="Members & Badges")|(report_type=="Members")|(report_type=="Programme & Attendance")|(report_type=="Events & Attendance")|(report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps") ){
+     if ((report_type=="Members & Badges")|(report_type=="Members")|(report_type=="Programme & Attendance")|(report_type=="Events & Attendance")|(report_type=="Members & Badges Details")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")|(report_type == "Members & Staged Badges") ){
     field_list = field_list + "<li>Members";
     field_list = field_list + "<ul><li>Core Fields";
     field_list = field_list + "<ul><li>Core Member Fields<ul>";
@@ -2121,7 +2189,7 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
         }
          field_list = field_list + "</ul></li>"; // WL
     } 
-    if ((report_type=="Members & Badges Details")|(report_type=="Members & Badges")|(report_type=="Badges")|(report_type=="Members & Challenge Badges") ){
+    if ((report_type=="Members & Badges Details")|(report_type=="Members & Badges")|(report_type=="Badges")|(report_type=="Members & Challenge Badges")|(report_type == "Members & Staged Badges") ){
     field_list = field_list + "<li>Badges<ul>";
     for (var core in badge_field_list) {
         
@@ -2131,7 +2199,7 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
     field_list = field_list + "</ul></li>"; // Badges
     }
     
-    if ((report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
+    if ((report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type == "Members & Staged Badges")) {
     field_list = field_list + "<li>Badges per Member<ul>";
     for (var core in bm_field_list) {
         
@@ -2140,7 +2208,7 @@ var chklbl2 = flex_cfg.structure[1].rows[flexif].name;
     } 
     field_list = field_list + "</ul></li>"; // Badges
     }
-    if ((report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
+    if ((report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type == "Members & Staged Badges")) {
 field_list = field_list + "<li>Badge Requirements per Member<ul>";
     for (var core in bm_field_detail_list) {    
         field_list = field_list + "<li class=\"chkfld\"><input type=\"checkbox\" name=\""+bm_field_detail_list[core].fieldlabel+"\" value=\""+bm_field_detail_list[core].fieldname;
@@ -2430,6 +2498,10 @@ $( "#progressbar" ).progressbar({ value: 100 * ( get_data_array2.length / get_da
   data: $.param(obj),
   dataType: "json",
 success: function(data,status,req) {
+    	if (req.getResponseHeader("x-blocked")!=null){
+			alert("");
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd+" "+get_data_array[c].field);
+			}
   if (req.responseText =='false') {
         var ss = this.url.indexOf("section_id=");
         if (ss>-1) { off = 11; } else { ss = this.url.indexOf("sectionid="); off = 10; };
@@ -2673,6 +2745,10 @@ $.ajax({
    
 			data:get_data_array[c].postvar,
 			success: function(data,status,req){
+			    	if (req.getResponseHeader("x-blocked")!=null){
+			alert("");
+          throw new Error("We has an issue getting data with this URL "+this.url+ " (false) "+sd+" "+get_data_array[c].field);
+			}
 			     if (JSON.parse(data).hasOwnProperty('error')&(JSON.parse(data).error != null)) {
 			         var ss = this.data.indexOf("section_id=");
 			         sd = "NO section";
@@ -2990,7 +3066,7 @@ dialog_delay.dialog( "open" );
     report_data = [];
    // ga('send', 'event', 'Report', 'OSMR', report_type);
     // Members and Members & Badges
-    if ((report_type=="Programme & Attendance")|(report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
+    if ((report_type=="Programme & Attendance")|(report_type=="Members")|(report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type == "Members & Staged Badges")|(report_type=="Members & Badges Details")|(report_type=="Members & Sections")|(report_type=="Members & WL")|(report_type=="Members & Maps")) {
     for(var section in report_config) {
         var members_array = JSON.parse(report_config[section].members);
         if (report_type=='Members & Maps')   {
@@ -3344,7 +3420,7 @@ dialog_delay.dialog( "open" );
                 }
             }
             }
-            if ((report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
+            if ((report_type=="Members & Badges")|(report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type == "Members & Staged Badges")) {
             // Loop at Badges and look for member/badge intersects 
                
                 var bm_def =  (report_config[section].memberbadges);
@@ -3376,15 +3452,77 @@ dialog_delay.dialog( "open" );
 var bmb = bm_def.data[bm].badges.findIndex(function find(a){return a.badge_shortname==badges;});
   if (bmb!=-1){ bm_match = true; 
     report_line2[checklist2[field]] = bm_def.data[bm].badges[bmb][fn];
+    if (fn=="statussym") {
+        var sym="";
+        fn2 = "status";
+        if (bm_def.data[bm].badges[bmb][fn2]==0 ) {  sym = "" } 
+        if ((bm_def.data[bm].badges[bmb][fn2]>0) & (bm_def.data[bm].badges[bmb][fn2]<=0.25)) {  sym = "&#9719;" } 
+        if ((bm_def.data[bm].badges[bmb][fn2]>0.25 ) & (bm_def.data[bm].badges[bmb][fn2]<=0.5)) {  sym = "&#9684;" } 
+         if ((bm_def.data[bm].badges[bmb][fn2]>0.5) & (bm_def.data[bm].badges[bmb][fn2]<=0.75)) {  sym = "&#9681;" } 
+         if ((bm_def.data[bm].badges[bmb][fn2]>0.75) & (bm_def.data[bm].badges[bmb][fn2]<1)) {  sym = "&#9685;" } 
+          if (bm_def.data[bm].badges[bmb][fn2]==1) {  sym = "&#11044;" } 
+          report_line2[checklist2[field]] = sym;
+    }
     if (fn=="awarded_date") {
       if (bm_def.data[bm].badges[bmb][fn]==-1) 
         {report_line2[checklist2[field]] = ""; } else 
-        {report_line2[checklist2[field]] = new Date(1000*bm_def.data[bm].badges[bmb][fn]);};
+        {report_line2[checklist2[field]] = new Date(1000*bm_def.data[bm].badges[bmb][fn]).toISOString().split('T')[0];};
+
+    }
+    if (fn=="yearcompleted") {
+      if ((bm_def.data[bm].badges[bmb]['awarded_date']==-1)) 
+        {report_line2[checklist2[field]] = ""; } else 
+        {report_line2[checklist2[field]] = (new Date(1000*bm_def.data[bm].badges[bmb]['awarded_date']).toISOString().split('T')[0]).substring(0,4);};
+
+    }
+     if (fn=="datedueaward") {
+      if ((bm_def.data[bm].badges[bmb]['awarded_date']==-1)) 
+      {report_line2[checklist2[field]] = ""; } else 
+        {report_line2[checklist2[field]] = new Date(1000*bm_def.data[bm].badges[bmb]['awarded_date']).toISOString().split('T')[0];};
+      if ((bm_def.data[bm].badges[bmb]['completed']>bm_def.data[bm].badges[bmb]['awarded']))  
+          {report_line2[checklist2[field]] = new Date(Date.now()).toISOString().split('T')[0];}
+     }
+     
+     if (fn=="yeardueaward") {
+      if ((bm_def.data[bm].badges[bmb]['awarded_date']==-1)) 
+      {report_line2[checklist2[field]] = ""; } else 
+        {report_line2[checklist2[field]] = (new Date(1000*bm_def.data[bm].badges[bmb]['awarded_date']).toISOString().split('T')[0]).substring(0,4);};
+      if ((bm_def.data[bm].badges[bmb]['completed']>bm_def.data[bm].badges[bmb]['awarded']))  
+          {report_line2[checklist2[field]] = (new Date(Date.now()).toISOString().split('T')[0]).substring(0,4);}
+     }
+     
+     
+    
+    if (fn=="due") {
+      report_line2[checklist2[field]] = "";     
+      if ((bm_def.data[bm].badges[bmb]['completed']>bm_def.data[bm].badges[bmb]['awarded'])) { 
+        report_line2[checklist2[field]] = "Due ";          
+        if (bm_def.data[bm].badges[bmb]['level']!=false) { report_line2[checklist2[field]]+=bm_def.data[bm].badges[bmb]['level']; }   
+      }
+    }
+     if (fn=="awardeddet") {
+      report_line2[checklist2[field]] = "";     
+      if (bm_def.data[bm].badges[bmb]['awarded']>=1) { 
+        report_line2[checklist2[field]] = "Awarded ";          
+        if (bm_def.data[bm].badges[bmb]['awarded']>1) { report_line2[checklist2[field]]+="Lvl "+bm_def.data[bm].badges[bmb]['awarded']; }   
+      }
+    }
+    if (fn=="dorc") {
+      report_line2[checklist2[field]] = "";    
+      if ((bm_def.data[bm].badges[bmb]['completed']==bm_def.data[bm].badges[bmb]['awarded'])&(bm_def.data[bm].badges[bmb]['completed']!=0)) {
+          report_line2[checklist2[field]] = "Completed ";
+          if (bm_def.data[bm].badges[bmb]['level']!=false) { report_line2[checklist2[field]]+=bm_def.data[bm].badges[bmb]['level']; } 
+      } 
+      if (bm_def.data[bm].badges[bmb]['completed']>bm_def.data[bm].badges[bmb]['awarded']) {
+          report_line2[checklist2[field]] = "Due ";
+          if (bm_def.data[bm].badges[bmb]['level']!=false) { report_line2[checklist2[field]]+=bm_def.data[bm].badges[bmb]['level']; } 
+      } 
 
     } 
+     
   };
 
-if ((report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")) {
+if ((report_type=="Members & Challenge Badges")|(report_type=="Members & Badges Details")|(report_type == "Members & Staged Badges")) {
      
 } 
       
@@ -3540,7 +3678,12 @@ var bmd_index = bmd.items.findIndex(function find(a){return a.scoutid==member;})
                             
                            } // BD Field
                           } // Fields
-                          report_data.push(report_line3);
+                           if (((report_type == "Members & Staged Badges")&((badges=='94_0')||(badges=='95_0')))||(report_type != "Members & Staged Badges")) {
+                            if ((report_type == "Members & Staged Badges")&(report_line3['Member Status']=="")) {
+                                report_line3['Member Status'] = 0;
+                            }
+                             report_data.push(report_line3);
+                           }
                            }
                          } // BAdges & Details
 
@@ -5303,9 +5446,9 @@ Delete: function () {delr_dialog.dialog( "close" );delete_report();}
 }});
  access= $('#logon_access').is(":checked");
 if (!access) {
-var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Members & WL","Members & Maps", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","User Access","Programme & Badges","Programme & Attendance"];
+var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Staged Badges","Members & Sections", "Members & WL","Members & Maps", "Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","User Access","Programme & Badges","Programme & Attendance"];
 } else {
-   var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Sections", "Members & WL","Members & Maps","Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","Programme & Badges","Programme & Attendance"]; 
+   var dialog_array = [ "Members","Members & Badges","Members & Badges Details","Members & Challenge Badges","Members & Staged Badges","Members & Sections", "Members & WL","Members & Maps","Badges","Badge Stock","Events","Events & Attendance","Events & QM Lists","QM List","Programme & Badges","Programme & Attendance"]; 
 }
 for (dodrop in dialog_array)
 {
