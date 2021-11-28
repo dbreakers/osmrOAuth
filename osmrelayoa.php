@@ -8,21 +8,21 @@ $callback_uri = "https://www.2ndnewhawscouts.org.uk/osmr/osmrelayoa.php";
 
 $test_api_url = "https://www.onlinescoutmanager.co.uk/oauth/resource";
 $parameters = $_GET;
-//INSERT YOUR KEYS HERE
+
 
 if ($parameters['oauthset']=='1'||$parameters['state']=='1') {
-$client_id = " ";
-$client_secret = " ";
+$client_id = "XX";
+$client_secret = "XX";
 } else {
-$client_id = " ";
-$client_secret = " ";
+$client_id = "XX";
+$client_secret = "XX";
 };
 
-
+ 
 
 
 if ($_POST["authorization_code"]) {
-//  echo var_dump($_POST);
+ 
 //  echo("POST");
 	//	what to do if there's an authorization code
     $tokens =  getAccessToken($_POST["authorization_code"]);
@@ -31,7 +31,7 @@ if ($_POST["authorization_code"]) {
 //	$resource = getResource($access_token);
 //	echo $resource;
 } elseif ($_GET["code"]) {
- //  echo var_dump($_GET);
+ //   echo var_dump($_GET);
 	$access_token = getAccessToken($_GET["code"]);
 //	$resource = getResource($access_token->access_token);
 //	echo ($resource);
@@ -43,10 +43,12 @@ if ($_POST["authorization_code"]) {
               window.opener.postMessage({access,refresh});
               window.close(); 
       }    
-    </script>
+    </script><span style="font-size:14pt">
+    <?php if ($access_token!="") { ?>    
       You have successfully logged onto OSM<br>  
- 
-	  <button onclick="click_and_return('<?php echo $access_token->access_token; ?>','<?php echo $access_token->refresh_token; ?>') ; " type="button">Return to original window</button>
+    
+	  <button style="width:200pt; height: 40pt" onclick="click_and_return('<?php echo $access_token->access_token; ?>','<?php echo $access_token->refresh_token; ?>') ; " type="button">Return to original window</button></span>
+	<?php } else  {echo "OSMR is currently unavailable, please try again later"; } ?>
 	<?php  
 }  elseif ($_GET["refresh"]) {
    $token = getRefreshToken($_GET["refresh"],$_GET["oauthset"]);
@@ -65,10 +67,11 @@ if ($_POST["authorization_code"]) {
 function getAuthorizationCode($scope,$st) {
 	global $authorize_url, $client_id, $callback_uri;
 	if ($_GET['access']=="false") {
-    $scope = "section:member:read section:flexirecord:read section:event:read section:badge:read section:quartermaster:read section:programme:read section:administration:admin";
+    $scope = "section:member:read section:flexirecord:read section:event:read section:badge:read section:quartermaster:read section:programme:read section:attendance:read section:administration:admin";
 	} else {
     $scope = "section:member:read section:flexirecord:read section:event:read section:badge:read section:quartermaster:read section:programme:read";
 	}
+	if ($_GET['access']=="noperson") {  $scope = "section:event:read section:badge:read section:quartermaster:read section:programme:read"; }
     //  $scope = "section:administration:read";
 	$authorization_redirect_url = $authorize_url . "?response_type=code&client_id=" . $client_id ."&client_secret=".$client_secret ."&redirect_uri=" . $callback_uri . "&scope=".$scope.'&state='.$st; //section:member:read section:flexirecord:read section:event:read section:badge:read section:quartermaster:read";
 
@@ -98,7 +101,8 @@ function getAccessToken($authorization_code) {
 	$response = curl_exec($curl);
 	curl_close($curl);
 //	echo("L:L:L:");
-//    echo($response);
+ 
+    if (json_decode($response)==null ) {echo "Access currently blocked by OSM this sometimes means too many people are using OSMR<br>";}
 	if ($response === false) {
 		echo "Failed";
 		echo curl_error($curl);
@@ -108,7 +112,7 @@ function getAccessToken($authorization_code) {
 		echo $authorization_code;
 		echo $response;
 	}
- //   echo(var_dump($response)); access token and refresh_token
+//    echo(var_dump($response));//access token and refresh_token
 //	return json_decode($response)->access_token;
 return json_decode($response);
 }
